@@ -34,6 +34,13 @@ class ChessGame():
         if move[0] == "K":
             self.flags["wKm" if self.player_turn == 0 else "bKm"] = True
             return
+        if move[0] == "R":
+            if move[1] == "a" and ((self.player_turn == 0 and move[2] == "1") or ((self.player_turn == 1 and move[2] == "8"))):
+                self.flags["wRam" if self.player_turn == 0 else "bRam"] = True
+                return
+            if move[1] == "h" and ((self.player_turn == 0 and move[2] == "1") or ((self.player_turn == 1 and move[2] == "8"))):
+                self.flags["wRhm" if self.player_turn == 0 else "bRhm"] = True
+                return
         self.flags["wP2m" if self.player_turn == 0 else "bP2m"] = None
 
     def letter_to_column(self, letter : str):
