@@ -9,7 +9,7 @@ def getElementSatisfy(list : list[str], elem : str):
     return -1
 
 class ChessRender():
-    def __init__(self, board : ChessGame, size = 640):
+    def __init__(self, board : ChessGame, bottom = 0, size = 640):
         pygame.init()
         self.board = board
         self.size = size
@@ -26,39 +26,42 @@ class ChessRender():
                 pygame.image.load(f"pieces/{name}.png"), (self.square_size, self.square_size)
             )
         self.win = pygame.display.set_mode((self.size, self.size))
+        self.bottom_player = bottom # 0 is for white, 1 is for black
         pygame.display.set_caption("Jeu d'échecs")
 
     def draw_board(self, win):
         # draw squares
-        for row in range(self.board.size):
+        for _row in range(self.board.size):
+            row = 7 - _row if self.bottom_player else _row
             for col in range(self.board.size):
                 color = self.white_color if (row + col) % 2 == 0 else self.brown_color
                 pygame.draw.rect(win, color, (col * self.square_size, row * self.square_size, self.square_size, self.square_size))
         if self.selected_piece:
-            row = 8 - int(self.selected_piece[2])
-            col = ord(self.selected_piece[1]) - 97
+            row_s = 8 - int(self.selected_piece[2]) if self.bottom_player == 0 else int(self.selected_piece[2]) - 1
+            col_s = ord(self.selected_piece[1]) - 97
             color = self.green_color
-            pygame.draw.rect(win, color, (col * self.square_size, row * self.square_size, self.square_size, self.square_size))
+            pygame.draw.rect(win, color, (col_s * self.square_size, row_s * self.square_size, self.square_size, self.square_size))
         # draw pieces
-        for row in range(self.board.size):
+        for _row in range(self.board.size):
+            row = 7 - _row if self.bottom_player else _row
             for col in range(self.board.size):
-                piece = self.board.board[row][col]
+                piece = self.board.board[_row][col]
                 if piece == "--":
                     continue
                 win.blit(self.pieces[piece], (col * self.square_size, row * self.square_size))
         if self.selected_piece:
             for move in self.board.get_moves_piece(self.selected_piece):
                 move = move.split("-")[1]
-                row = 8 - int(move[2])
-                col = ord(move[1]) - 97
-                pygame.draw.circle(win, color, (col * self.square_size + self.square_size // 2, row * self.square_size + self.square_size // 2), self.square_size // 8)
+                row_s = 8 - int(move[2]) if self.bottom_player == 0 else int(move[2]) - 1
+                col_s = ord(move[1]) - 97
+                pygame.draw.circle(win, color, (col_s * self.square_size + self.square_size // 2, row_s * self.square_size + self.square_size // 2), self.square_size // 8)
         pygame.display.update()
         self.changed = False
 
 
     def get_square_clicked(self, pos):
         x, y = pos
-        row = y // self.square_size
+        row = 7 - y // self.square_size if self.bottom_player else y // self.square_size
         col = x // self.square_size
         return row, col
 
