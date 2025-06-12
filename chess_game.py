@@ -11,8 +11,30 @@ class ChessGame():
             ["wP"] * 8,
             ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"],
         ]
+        self.flags = {
+            "wKm" : False,
+            "bKm" : False,
+            "wRam" : False,
+            "wRhm" : False,
+            "bRam" : False,
+            "bRhm" : False,
+            "wP2m" : None,
+            "bP2m" : None
+        }
         self.player_turn = 0 # 0 is white, 1 is black
         self.current_moves = self.get_moves()
+
+    def update_flags(self, move : str):
+        if move[0] == "P":
+            if abs(int(move[6]) - int(move[2])) == 2:
+                self.flags["wP2m" if self.player_turn == 0 else "bP2m"] = ord(move[1]) - 97
+            else:
+                self.flags["wP2m" if self.player_turn == 0 else "bP2m"] = None
+            return
+        if move[0] == "K":
+            self.flags["wKm" if self.player_turn == 0 else "bKm"] = True
+            return
+        self.flags["wP2m" if self.player_turn == 0 else "bP2m"] = None
 
     def letter_to_column(self, letter : str):
         if len(letter) != 1:
@@ -76,6 +98,9 @@ class ChessGame():
                     target = self.board[row + direction][col + dc]
                     if target != "--" and target[0] != current_color:
                         moves.append(f"{piece_str}-{name}{chr(col + dc + 97)}{8 - (row + direction)}")
+                    if (col + dc) == self.flags["wP2m" if self.player_turn == 1 else "bP2m"]: # en passant
+                        if (self.player_turn == 0 and row == 3) or (self.player_turn == 1 and row == 4):
+                            moves.append(f"{piece_str}-{name}{chr(col + dc + 97)}{8 - (row + direction)}-*")
             return moves
         if name == "Q":
             directions = [(-1, 0), (1, 0), (0, -1), (0, 1),
@@ -134,7 +159,9 @@ class ChessGame():
         return ret
 
     def move(self, move : str): # convention is "piece from-piece to"
-        piece_from, piece_to = move.split("-")
+        move_split = move.split("-")
+        piece_from = move_split[0]
+        piece_to = move_split[1]
         from_row = 8 - int(piece_from[2])
         from_col = self.letter_to_column(piece_from[1])
         to_row = 8 - int(piece_to[2])
@@ -153,6 +180,10 @@ class ChessGame():
         if piece[0] != current_color:
             return 0
         # set piece
+        self.update_flags(move)
+        if move[0] == "P" and len(move_split) == 3:
+            if move_split[2] == "*": # for now only en passant but later promotion
+                self.board[from_row][to_col] = "--"
         self.board[from_row][from_col] = "--"
         self.board[to_row][to_col] = piece
         self.player_turn = (self.player_turn + 1) % 2

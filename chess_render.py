@@ -2,6 +2,12 @@ import pygame
 from chess_game import ChessGame
 import sys
 
+def getElementSatisfy(list : list[str], elem : str):
+    for i, x in enumerate(list):
+        if x.startswith(elem):
+            return i
+    return -1
+
 class ChessRender():
     def __init__(self, board : ChessGame, size = 640):
         pygame.init()
@@ -91,11 +97,12 @@ class ChessRender():
                         print("Selecting", self.selected_piece, self.board.get_moves_piece(self.selected_piece))
                         continue
                     # try to play the move
-                    move = f"{self.selected_piece}-{self.selected_piece[0]}{chr(cc + 97)}{8 - rc}"
-                    if not move in self.board.current_moves:
+                    move_played = f"{self.selected_piece}-{self.selected_piece[0]}{chr(cc + 97)}{8 - rc}"
+                    move_wanted = getElementSatisfy(self.board.current_moves, move_played)
+                    if move_wanted == -1:
                         self.selected_piece = None
                         continue
-                    if self.board.move(move) == -1:
+                    if self.board.move(self.board.current_moves[move_wanted]) == -1:
                         break
                     self.selected_piece = None
 
