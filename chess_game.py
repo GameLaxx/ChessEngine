@@ -14,7 +14,7 @@ class ChessGame():
             [0 for _ in range(6)],
             [0 for _ in range(6)]
         ] # all pieces on square 
-        self.init_board()
+        self.init_board() # place pieces in the right squares
         self.board = [
             ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
             ["bP"] * 8,
@@ -50,9 +50,19 @@ class ChessGame():
         if piece == 4:
             return "Q"
         return "K"
+    
+    def square_to_index(self, square):
+        row = 8 - int(square[1])
+        col = ord(square[0]) - 97
+        return (col + row * 8)
+    def square_to_bit(self, square):
+        return 1 << self.square_to_bit(square)
 
     def set_piece(self, color, piece, square):
         self.bitboards[color][piece] |= 1 << square
+        
+    def pop_piece(self, color, piece, square):
+        self.bitboards[color][piece] &= ~(1 << square)
 
     def init_board(self):
         # pawns
