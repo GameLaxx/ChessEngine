@@ -43,20 +43,21 @@ class ChessGame():
 
         def in_bounds(r, c):
             return 0 <= r < 8 and 0 <= c < 8
-
-        def add_moves(r, c, dr, dc, repeat=True):
+        def add_moves(r, c, dr, dc):
+            # add the first directionnal boost before searching for empty spaces
             r += dr
             c += dc
             while in_bounds(r, c):
                 target = self.board[r][c]
+                # empty square
                 if target == "--":
                     moves.append(f"{piece_str}-{name}{chr(c + 97)}{8 - r}")
+                # opponent piece
                 elif target[0] != current_color:
                     moves.append(f"{piece_str}-{name}{chr(c + 97)}{8 - r}")
                     break
+                # own piece
                 else:
-                    break
-                if not repeat:
                     break
                 r += dr
                 c += dc
@@ -64,33 +65,35 @@ class ChessGame():
         if name == "P":
             direction = -1 if current_color == "w" else 1
             start_row = 6 if current_color == "w" else 1
+            # front moves
             if in_bounds(row + direction, col) and self.board[row + direction][col] == "--":
                 moves.append(f"{piece_str}-{name}{chr(col + 97)}{8 - (row + direction)}")
                 if row == start_row and self.board[row + 2 * direction][col] == "--":
                     moves.append(f"{piece_str}-{name}{chr(col + 97)}{8 - (row + 2 * direction)}")
+            # diagonal captures
             for dc in [-1, 1]:
                 if in_bounds(row + direction, col + dc):
                     target = self.board[row + direction][col + dc]
                     if target != "--" and target[0] != current_color:
                         moves.append(f"{piece_str}-{name}{chr(col + dc + 97)}{8 - (row + direction)}")
-
-        elif name == "R":
-            directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-            for dr, dc in directions:
-                add_moves(row, col, dr, dc)
-
-        elif name == "B":
-            directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-            for dr, dc in directions:
-                add_moves(row, col, dr, dc)
-
-        elif name == "Q":
+            return moves
+        if name == "Q":
             directions = [(-1, 0), (1, 0), (0, -1), (0, 1),
                           (-1, -1), (-1, 1), (1, -1), (1, 1)]
             for dr, dc in directions:
                 add_moves(row, col, dr, dc)
-
-        elif name == "N":
+            return moves
+        if name == "R":
+            directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            for dr, dc in directions:
+                add_moves(row, col, dr, dc)
+            return moves
+        if name == "B":
+            directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+            for dr, dc in directions:
+                add_moves(row, col, dr, dc)
+            return moves
+        if name == "N":
             knight_moves = [
                 (-2, -1), (-2, 1), (-1, -2), (-1, 2),
                 (1, -2), (1, 2), (2, -1), (2, 1)
@@ -101,17 +104,17 @@ class ChessGame():
                     target = self.board[r2][c2]
                     if target == "--" or target[0] != current_color:
                         moves.append(f"{piece_str}-{name}{chr(c2 + 97)}{8 - r2}")
-
-        elif name == "K":
-            for dr in [-1, 0, 1]:
-                for dc in [-1, 0, 1]:
-                    if dr == 0 and dc == 0:
-                        continue
-                    r2, c2 = row + dr, col + dc
-                    if in_bounds(r2, c2):
-                        target = self.board[r2][c2]
-                        if target == "--" or target[0] != current_color:
-                            moves.append(f"{piece_str}-{name}{chr(c2 + 97)}{8 - r2}")
+            return moves
+        # nominal case is king because almost never used
+        for dr in [-1, 0, 1]:
+            for dc in [-1, 0, 1]:
+                if dr == 0 and dc == 0:
+                    continue
+                r2, c2 = row + dr, col + dc
+                if in_bounds(r2, c2):
+                    target = self.board[r2][c2]
+                    if target == "--" or target[0] != current_color:
+                        moves.append(f"{piece_str}-{name}{chr(c2 + 97)}{8 - r2}")
         return moves
     
     def get_moves(self): # 36s for 1M call

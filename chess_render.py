@@ -13,6 +13,7 @@ class ChessRender():
         self.green_color = (100, 180, 100)
         self.pieces = {}
         self.selected_piece = None
+        self.changed = True
         PIECE_NAMES = ["bR", "bN", "bB", "bQ", "bK", "bP", "wR", "wN", "wB", "wQ", "wK", "wP"]
         for name in PIECE_NAMES:
             self.pieces[name] = pygame.transform.scale(
@@ -34,6 +35,7 @@ class ChessRender():
                     continue
                 win.blit(self.pieces[piece], (col * self.square_size, row * self.square_size))
         pygame.display.update()
+        self.changed = False
 
 
     def get_square_clicked(self, pos):
@@ -47,7 +49,8 @@ class ChessRender():
         clock = pygame.time.Clock()
         while True:
             clock.tick(60)
-            self.draw_board(self.win)
+            if self.changed:
+                self.draw_board(self.win)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -55,6 +58,7 @@ class ChessRender():
                     sys.exit()
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self.changed = True
                     rc, cc = self.get_square_clicked(pygame.mouse.get_pos())
                     piece = self.board.board[rc][cc]
                     
@@ -70,10 +74,12 @@ class ChessRender():
                         self.selected_piece = f"{piece[1]}{chr(cc + 97)}{8 - rc}"
                         print("Selecting", self.selected_piece, self.board.get_moves_piece(self.selected_piece))
                         continue
+                    # change piece
                     if (piece[0] == "w" and self.board.player_turn == 0) or (piece[0] == "b" and self.board.player_turn == 1):
                         self.selected_piece = f"{piece[1]}{chr(cc + 97)}{8 - rc}"
                         print("Selecting", self.selected_piece, self.board.get_moves_piece(self.selected_piece))
                         continue
+                    # try to play the move
                     move = f"{self.selected_piece}-{self.selected_piece[0]}{chr(cc + 97)}{8 - rc}"
                     if not move in self.board.current_moves:
                         self.selected_piece = None
