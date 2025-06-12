@@ -23,17 +23,29 @@ class ChessRender():
         pygame.display.set_caption("Jeu d'échecs")
 
     def draw_board(self, win):
+        # draw squares
         for row in range(self.board.size):
             for col in range(self.board.size):
-                if self.selected_piece and (row == 8 - int(self.selected_piece[2])) and col == ord(self.selected_piece[1]) - 97:
-                    color = self.green_color
-                else:
-                    color = self.white_color if (row + col) % 2 == 0 else self.brown_color
+                color = self.white_color if (row + col) % 2 == 0 else self.brown_color
                 pygame.draw.rect(win, color, (col * self.square_size, row * self.square_size, self.square_size, self.square_size))
+        if self.selected_piece:
+            row = 8 - int(self.selected_piece[2])
+            col = ord(self.selected_piece[1]) - 97
+            color = self.green_color
+            pygame.draw.rect(win, color, (col * self.square_size, row * self.square_size, self.square_size, self.square_size))
+        # draw pieces
+        for row in range(self.board.size):
+            for col in range(self.board.size):
                 piece = self.board.board[row][col]
                 if piece == "--":
                     continue
                 win.blit(self.pieces[piece], (col * self.square_size, row * self.square_size))
+        if self.selected_piece:
+            for move in self.board.get_moves_piece(self.selected_piece):
+                move = move.split("-")[1]
+                row = 8 - int(move[2])
+                col = ord(move[1]) - 97
+                pygame.draw.circle(win, color, (col * self.square_size + self.square_size // 2, row * self.square_size + self.square_size // 2), self.square_size // 8)
         pygame.display.update()
         self.changed = False
 
@@ -61,7 +73,6 @@ class ChessRender():
                     self.changed = True
                     rc, cc = self.get_square_clicked(pygame.mouse.get_pos())
                     piece = self.board.board[rc][cc]
-                    
                     if self.selected_piece == None:
                         # wrong color
                         if piece[0] == "w" and self.board.player_turn == 1:
