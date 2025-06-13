@@ -1,6 +1,7 @@
 class ChessGame():
     WHITE = 0
     BLACK = 1
+    BOTH = 2
     PAWN = 0
     KNIGHT = 1
     BISHOP = 2
@@ -17,6 +18,7 @@ class ChessGame():
             [0 for _ in range(6)]
         ] # all pieces on square 
         self.init_board() # place pieces on the right squares
+        self.occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
         self.flags = {
             "wKm" : False,
             "bKm" : False,
@@ -29,6 +31,10 @@ class ChessGame():
         }
         self.player_turn = self.WHITE
         self.current_moves = self.get_moves()
+
+    #-------------------------------------------------------------------------------------------------------------
+    # Utilities
+    #-------------------------------------------------------------------------------------------------------------
 
     def piece_to_str(self, piece):
         if piece == self.PAWN:
@@ -52,9 +58,36 @@ class ChessGame():
 
     def set_piece(self, color, piece, index : int):
         self.bitboards[color][piece] |= 1 << index
-        
     def pop_piece(self, color, piece, index : int):
         self.bitboards[color][piece] &= ~(1 << index)
+
+    def bitboard_to_indices(self, bitboard : int):
+        """
+        ### Params:
+            - bitboard: the bitboard to convert
+        
+        ### Returns:
+            - list[(row, col)]
+        """
+        indices = []
+        while bitboard:
+            lowest_bit = bitboard & -bitboard
+            indices.append(lowest_bit.bit_length() - 1)
+            bitboard &= bitboard - 1 # remove lowest bit
+        return indices
+    def bitboard_to_squares(self, bitboard : int):
+        return list(map(lambda x : divmod(x, 8), self.bitboard_to_indices(bitboard)))
+    
+    def letter_to_column(self, letter : str):
+        if len(letter) != 1:
+            return -1
+        if letter > "h" or letter < "a":
+            return -1
+        return ord(letter) - 97 # 97 == ord("a")
+
+    #-------------------------------------------------------------------------------------------------------------
+    # Init
+    #-------------------------------------------------------------------------------------------------------------
 
     def init_board(self):
         # pawns
@@ -83,22 +116,14 @@ class ChessGame():
         self.set_piece(self.BLACK, self.KING, 4)
         self.set_piece(self.WHITE, self.KING, 60)
 
-    def bitboard_to_indices(self, bitboard : int):
-        """
-        ### Params:
-            - bitboard: the bitboard to convert
-        
-        ### Returns:
-            - list[(row, col)]
-        """
-        indices = []
-        while bitboard:
-            lowest_bit = bitboard & -bitboard
-            indices.append(lowest_bit.bit_length() - 1)
-            bitboard &= bitboard - 1 # remove lowest bit
-        return indices
-    def bitboard_to_squares(self, bitboard : int):
-        return list(map(lambda x : divmod(x, 8), self.bitboard_to_indices(bitboard)))
+    #-------------------------------------------------------------------------------------------------------------
+    # Update functions
+    #-------------------------------------------------------------------------------------------------------------
+
+    def update_occupancy(self):
+        self.occupancy[self.WHITE] = sum(self.bitboards[self.WHITE])
+        self.occupancy[self.BLACK] = sum(self.bitboards[self.BLACK])
+        self.occupancy[self.BOTH] = self.occupancy[self.WHITE] | self.occupancy[self.BLACK]
 
     def update_flags(self, move : str):
         if move[0] == "P":
@@ -119,12 +144,9 @@ class ChessGame():
                 return
         self.flags["wP2m" if self.player_turn == self.WHITE else "bP2m"] = None
 
-    def letter_to_column(self, letter : str):
-        if len(letter) != 1:
-            return -1
-        if letter > "h" or letter < "a":
-            return -1
-        return ord(letter) - 97 # 97 == ord("a")
+    #-------------------------------------------------------------------------------------------------------------
+    # Moves
+    #-------------------------------------------------------------------------------------------------------------
     
     def get_moves_piece(self, piece : int, index : int):
         moves = 0
@@ -182,23 +204,11 @@ class ChessGame():
             return 0
         if not (0 <= from_row < 8) or not (0 <= to_row < 8):
             return 0
-        piece = self.board[from_row][from_col]
-        # no piece selected
-        if piece == "--":
-            return 0
-        current_color = 'w' if self.player_turn == self.WHITE else 'b'
-        # piece of wrong color selected
-        if piece[0] != current_color:
-            return 0
-        # set piece
-        self.update_flags(move)
-        if move[0] == "P" and len(move_split) == 3:
-            if move_split[2] == "*": # for now only en passant but later promotion
-                self.board[from_row][to_col] = "--"
-        self.board[from_row][from_col] = "--"
-        self.board[to_row][to_col] = piece
-        self.player_turn = (self.player_turn + 1) % 2
-        self.current_moves = self.get_moves()
+        raise ValueError("Not build yet")
+    
+    #-------------------------------------------------------------------------------------------------------------
+    # Moves
+    #-------------------------------------------------------------------------------------------------------------
 
     def __repr__(self):
         tmp_board = [
