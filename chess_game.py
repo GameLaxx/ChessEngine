@@ -221,6 +221,13 @@ class ChessGame():
         king_position = bitboards[player][self.KING].bit_length() - 1 # only one king
         bitboards_attacked = self.board_attacked(bitboards, occupancy, player)
         return (1 << king_position) & bitboards_attacked != 0
+    
+    def is_legal(self, move : str):
+        sim_bitboards = [row[:] for row in self.bitboards]
+        sim_bitboards = self.move(move, sim_bitboards)
+        sim_occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
+        self.update_occupancy(sim_bitboards, sim_occupancy)
+        return not self.is_king_checked(sim_bitboards, sim_occupancy)
 
     #-------------------------------------------------------------------------------------------------------------
     # Moves
@@ -314,7 +321,7 @@ class ChessGame():
         for piece in range(6):
             indices = self.bitboard_to_indices(player_bitboards[piece])
             for index in indices:
-                ret += self.get_moves_piece(piece, index, sim_occupancy)
+                ret += list(filter(self.is_legal , self.get_moves_piece(piece, index, sim_occupancy)))
         return ret
 
     def move(self, move : str, bitboards = None): # convention is "piece from-piece to"

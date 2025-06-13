@@ -52,6 +52,8 @@ class ChessRender():
                 win.blit(self.pieces[piece], (col * self.square_size, row * self.square_size))
         if self.selected_piece:
             for move in self.board.get_moves_piece(self.board.str_to_piece(self.selected_piece[0]), self.board.square_to_index(self.selected_piece[1:3])):
+                if not self.board.is_legal(move):
+                    continue
                 move = move.split("-")[1]
                 row_s = 8 - int(move[2]) if self.bottom_player == 0 else int(move[2]) - 1
                 col_s = ord(move[1]) - 97

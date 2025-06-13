@@ -3,8 +3,8 @@ from chess_render import ChessRender
 from chess_bot import ChessBot
 
 board = ChessGame()
-print(board)
-print_bitboard(board.board_attacked())
+render = ChessRender(board)
+render.update()
 # bot = ChessBot(board)
 
 # bitboards = [
