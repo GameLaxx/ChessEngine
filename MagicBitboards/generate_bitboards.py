@@ -21,7 +21,9 @@ def rook_mask(square):
     rank, file = divmod(square, 8)
     for dr, df in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
         r, f = rank + dr, file + df
-        while 0 < r < 7 and 0 < f < 7:
+        while 0 <= r < 8 and 0 <= f < 8:
+            if r == rank and f == file:
+                break
             attacks |= 1 << (r * 8 + f)
             r += dr
             f += df
@@ -131,7 +133,6 @@ def generate_all_attacks(mb):
     ret = {}
     for i in range(64):
         ret[i] = build_magic_table(i, mb[0], mb[2])
-    print(len(ret.keys()))
     with open(f"MagicBitboards/{mb[1]}", "w+", encoding="utf-8") as f:
         json.dump(ret, f, ensure_ascii=False, indent=4)
 
