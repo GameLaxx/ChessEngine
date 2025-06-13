@@ -182,7 +182,25 @@ class ChessGame():
     def get_moves_piece_bitboard(self, piece : int, index : int):
         moves = 0
         if piece == self.PAWN:
-            return 0
+            pos = 1 << index
+            if self.player_turn == self.WHITE:
+                # simple
+                one_step = (pos >> 8) & ~self.occupancy[self.BOTH]
+                # double
+                two_steps = ((one_step & 0x0000FF0000000000) >> 8) & ~self.occupancy[self.BOTH]
+                # captures
+                captures_left = (pos >> 7) & self.occupancy[self.BLACK] & ~0x8080808080808080 # avoid a file
+                captures_right = (pos >> 9) & self.occupancy[self.BLACK] & ~0x0101010101010101 # avoid h file
+            else:
+                # simple
+                one_step = (pos << 8) & ~self.occupancy[self.BOTH]
+                # double
+                two_steps = ((one_step & 0x0000000000FF0000) << 8) & ~self.occupancy[self.BOTH]
+                # captures
+                captures_left = (pos << 9) & self.occupancy[self.WHITE] & ~0x0101010101010101 # avoid a file
+                captures_right = (pos << 7) & self.occupancy[self.WHITE] & ~0x8080808080808080 # avoid h file
+            moves |= one_step | two_steps | captures_left | captures_right
+            return moves
         if piece == self.QUEEN:
             # bishop
             masked_bishop = self.occupancy[self.BOTH] & self.mb_bishop[index]["mask"]
