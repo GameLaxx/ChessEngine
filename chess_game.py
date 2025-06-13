@@ -67,6 +67,18 @@ class ChessGame():
         if piece == self.QUEEN:
             return "Q"
         return "K"
+    def str_to_piece(self, piece):
+        if piece == "P":
+            return self.PAWN
+        if piece == "N":
+            return self.KNIGHT
+        if piece == "B":
+            return self.BISHOP
+        if piece == "R":
+            return self.ROOK
+        if piece == "Q":
+            return self.QUEEN
+        return self.KING
     
     def square_to_index(self, square_str : str):
         row = 8 - int(square_str[1])
@@ -167,7 +179,7 @@ class ChessGame():
     # Moves
     #-------------------------------------------------------------------------------------------------------------
     
-    def get_moves_piece(self, piece : int, index : int):
+    def get_moves_piece_bitboard(self, piece : int, index : int):
         moves = 0
         if piece == self.PAWN:
             return 0
@@ -216,6 +228,16 @@ class ChessGame():
                 if abs(tr - rank) <= 1 and abs(tf - file) <= 1: # on a square around the king
                     moves |= 1 << target
         return moves & ~self.occupancy[self.player_turn]
+    
+    def get_moves_piece(self, piece : int, index : int):
+        ret = []
+        moves_bitboard = self.get_moves_piece_bitboard(piece, index)
+        from_square = divmod(index, 8)
+        to_squares = self.bitboard_to_squares(moves_bitboard)
+        for square in to_squares:
+            piece_str = self.piece_to_str(piece)
+            ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}")
+        return ret
 
     def get_moves(self): # 36s for 1M call
         ret = []
@@ -223,12 +245,7 @@ class ChessGame():
         for piece in range(6):
             indices = self.bitboard_to_indices(player_bitboards[piece])
             for index in indices:
-                from_square = divmod(index, 8)
-                moves_bitboard = self.get_moves_piece(piece, index)
-                to_squares = self.bitboard_to_squares(moves_bitboard)
-                for square in to_squares:
-                    piece_str = self.piece_to_str(piece)
-                    ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}")
+                ret += self.get_moves_piece(piece, index)
         return ret
 
     def move(self, move : str): # convention is "piece from-piece to"
@@ -250,8 +267,8 @@ class ChessGame():
     # Moves
     #-------------------------------------------------------------------------------------------------------------
 
-    def __repr__(self):
-        tmp_board = [
+    def to_matrix(self):
+        ret = [
             ["--"] * 8,
             ["--"] * 8,
             ["--"] * 8,
@@ -264,10 +281,13 @@ class ChessGame():
         for piece in range(6):
             indices_w = self.bitboard_to_squares(self.bitboards[self.WHITE][piece]) 
             for index in indices_w:
-                tmp_board[index[0]][index[1]] = "w" + self.piece_to_str(piece)
+                ret[index[0]][index[1]] = "w" + self.piece_to_str(piece)
             indices_b = self.bitboard_to_squares(self.bitboards[self.BLACK][piece]) 
             for index in indices_b:
-                tmp_board[index[0]][index[1]] = "b" + self.piece_to_str(piece)
-        rows = list(map(lambda row : ".".join(row), tmp_board))
+                ret[index[0]][index[1]] = "b" + self.piece_to_str(piece)
+        return ret
+
+    def __repr__(self):
+        rows = list(map(lambda row : ".".join(row), self.to_matrix()))
         board = "\n".join(rows)
         return board
