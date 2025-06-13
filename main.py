@@ -1,9 +1,14 @@
 from chess_game import ChessGame
 from chess_render import ChessRender
+from chess_bot import ChessBot
 
 board = ChessGame()
-print(board)
-print(board.get_moves())
-render = ChessRender(board)
+bot = ChessBot(board)
 
-render.update()
+bitboards = [
+            [0 for _ in range(6)],
+            [0 for _ in range(6)]
+        ]
+board.set_piece(0, 4, 36, bitboards)
+
+bot.make_decision(bitboards)
