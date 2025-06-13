@@ -1,3 +1,15 @@
+import json
+
+# debug
+def print_bitboard(bb):
+    for rank in range(8):
+        line = ""
+        for file in range(8):
+            sq = rank * 8 + file
+            line += "1 " if (bb >> sq) & 1 else ". "
+        print(line)
+    print()
+
 class ChessGame():
     WHITE = 0
     BLACK = 1
@@ -13,12 +25,19 @@ class ChessGame():
     # bitboards : a1 == 0 and h8 == 63
     def __init__(self):
         self.size = 8
+        with open("MagicBitboards/mb_bishop.json", "r", encoding="utf-8") as f:
+            self.mb_bishop = json.load(f)
+            self.mb_bishop = {int(k): v for k, v in self.mb_bishop.items()}
+        with open("MagicBitboards/mb_rook.json", "r", encoding="utf-8") as f:
+            self.mb_rook = json.load(f)
+            self.mb_rook = {int(k): v for k, v in self.mb_rook.items()}
         self.bitboards = [
             [0 for _ in range(6)],
             [0 for _ in range(6)]
         ] # all pieces on square 
         self.init_board() # place pieces on the right squares
         self.occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
+        self.update_occupancy() # after placing pieces, update occupancy
         self.flags = {
             "wKm" : False,
             "bKm" : False,
@@ -151,13 +170,34 @@ class ChessGame():
     def get_moves_piece(self, piece : int, index : int):
         moves = 0
         if piece == self.PAWN:
-            return []
+            return 0
         if piece == self.QUEEN:
-            return []
+            # bishop
+            masked_bishop = self.occupancy[self.BOTH] & self.mb_bishop[index]["mask"]
+            attack_index_bishop = (masked_bishop * self.mb_bishop[index]["magic"]) >> self.mb_bishop[index]["shift"]
+            relevant_bits_bishop = 64 - self.mb_bishop[index]["shift"]
+            attack_index_bishop &= (1 << relevant_bits_bishop) - 1
+            # rook
+            masked_rook = self.occupancy[self.BOTH] & self.mb_rook[index]["mask"]
+            attack_index_rook = (masked_rook * self.mb_rook[index]["magic"]) >> self.mb_rook[index]["shift"]
+            relevant_bits_rook = 64 - self.mb_rook[index]["shift"]
+            attack_index_rook &= (1 << relevant_bits_rook) - 1
+            moves = self.mb_bishop[index]["table"][attack_index_bishop] | self.mb_rook[index]["table"][attack_index_rook]
+            return moves & ~self.occupancy[self.player_turn]
         if piece == self.ROOK:
-            return []
+            masked = self.occupancy[self.BOTH] & self.mb_rook[index]["mask"]
+            attack_index = (masked * self.mb_rook[index]["magic"]) >> self.mb_rook[index]["shift"]
+            relevant_bits = 64 - self.mb_rook[index]["shift"]
+            attack_index &= (1 << relevant_bits) - 1
+            moves = self.mb_rook[index]["table"][attack_index]
+            return moves & ~self.occupancy[self.player_turn]
         if piece == self.BISHOP:
-            return []
+            masked = self.occupancy[self.BOTH] & self.mb_bishop[index]["mask"]
+            attack_index = (masked * self.mb_bishop[index]["magic"]) >> self.mb_bishop[index]["shift"]
+            relevant_bits = 64 - self.mb_bishop[index]["shift"]
+            attack_index &= (1 << relevant_bits) - 1
+            moves = self.mb_bishop[index]["table"][attack_index]
+            return moves & ~self.occupancy[self.player_turn]
         if piece == self.KNIGHT:
             rank, file = divmod(index, 8)
             for delta in self.KNIGHT_DELTAS:
@@ -166,7 +206,7 @@ class ChessGame():
                     tr, tf = divmod(target, 8)
                     if abs(tr - rank) <= 2 and abs(tf - file) <= 2: # on a square around the knight
                         moves |= 1 << target
-            return moves
+            return moves & ~self.occupancy[self.player_turn]
         # only king is left
         rank, file = divmod(index, 8)
         for delta in self.KING_DELTAS:
@@ -175,13 +215,13 @@ class ChessGame():
                 tr, tf = divmod(target, 8)
                 if abs(tr - rank) <= 1 and abs(tf - file) <= 1: # on a square around the king
                     moves |= 1 << target
-        return moves
+        return moves & ~self.occupancy[self.player_turn]
 
     def get_moves(self): # 36s for 1M call
         ret = []
-        player_bitboard = self.bitboards[self.player_turn]
+        player_bitboards = self.bitboards[self.player_turn]
         for piece in range(6):
-            indices = self.bitboard_to_indices(player_bitboard[piece])
+            indices = self.bitboard_to_indices(player_bitboards[piece])
             for index in indices:
                 from_square = divmod(index, 8)
                 moves_bitboard = self.get_moves_piece(piece, index)
