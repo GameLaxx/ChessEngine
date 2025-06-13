@@ -90,6 +90,10 @@ class ChessGame():
     def set_piece(self, color, piece, index : int):
         self.bitboards[color][piece] |= 1 << index
     def pop_piece(self, color, piece, index : int):
+        if piece == -1:
+            for i in range(6):
+                self.bitboards[color][i] &= ~(1 << index)
+            return
         self.bitboards[color][piece] &= ~(1 << index)
 
     def bitboard_to_indices(self, bitboard : int):
@@ -267,6 +271,7 @@ class ChessGame():
         return ret
 
     def move(self, move : str): # convention is "piece from-piece to"
+        next_player = (self.player_turn + 1) % 2
         move_split = move.split("-")
         piece_from = move_split[0]
         piece_to = move_split[1]
@@ -275,9 +280,10 @@ class ChessGame():
         index_to = self.square_to_index(piece_to[1:])
         self.set_piece(self.player_turn, piece_type, index_to)
         self.pop_piece(self.player_turn, piece_type, index_from)
+        self.pop_piece(next_player, -1, index_to) # -1 because we don't know the piece type and it is not relevant
         self.update_occupancy()
         self.update_flags(move)
-        self.player_turn = (self.player_turn + 1) % 2
+        self.player_turn = next_player
         self.current_moves = self.get_moves()
         return
         
