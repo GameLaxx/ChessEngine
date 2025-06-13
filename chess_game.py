@@ -10,6 +10,12 @@ def print_bitboard(bb):
         print(line)
     print()
 
+def print_bit(bb):
+    ret = ""
+    for i in range(64):
+        ret += str((1 << i) & bb)
+    print(ret)
+
 class ChessGame():
     WHITE = 0
     BLACK = 1
@@ -195,31 +201,57 @@ class ChessGame():
     # Legal Moves
     #-------------------------------------------------------------------------------------------------------------
 
+    def board_attacked(self, sim_bitboards = None, sim_occupancy = None, sim_color = None):
+        bitboards = sim_bitboards if sim_bitboards else self.bitboards
+        occupancy = sim_occupancy if sim_occupancy else self.occupancy
+        player = sim_color if sim_color else self.player_turn
+        opponent_bitboards = bitboards[player - 1]
+        ret_bitboards = 0
+        for piece in range(6):
+            indices = self.bitboard_to_indices(opponent_bitboards[piece])
+            for index in indices:
+                ret_bitboards |= self.get_moves_piece_bitboard(piece, index, occupancy, (player + 1) % 2, True)
+                # currently the index of the piece is not taken into account => if problem might be try this solution
+        return ret_bitboards
+    
+    def is_king_checked(self, sim_bitboards = None, sim_occupancy = None, sim_color = None):
+        bitboards = sim_bitboards if sim_bitboards else self.bitboards
+        occupancy = sim_occupancy if sim_occupancy else self.occupancy
+        player = sim_color if sim_color else self.player_turn
+        king_position = bitboards[player][self.KING].bit_length() - 1 # only one king
+        bitboards_attacked = self.board_attacked(bitboards, occupancy, player)
+        return (1 << king_position) & bitboards_attacked != 0
+
     #-------------------------------------------------------------------------------------------------------------
     # Moves
     #-------------------------------------------------------------------------------------------------------------
     
-    def get_moves_piece_bitboard(self, piece : int, index : int, sim_occupancy = None):
+    def get_moves_piece_bitboard(self, piece : int, index : int, sim_occupancy = None, sim_color = None, attack_only = False):
         moves = 0
         occupancy = sim_occupancy if sim_occupancy else self.occupancy
+        player = sim_color if sim_color else self.player_turn
         if piece == self.PAWN:
             pos = 1 << index
-            if self.player_turn == self.WHITE:
-                # simple
-                one_step = (pos >> 8) & ~occupancy[self.BOTH]
-                # double
-                two_steps = ((one_step & 0x0000FF0000000000) >> 8) & ~occupancy[self.BOTH]
+            one_step = 0 
+            two_steps = 0
+            if player == self.WHITE:
+                if not attack_only:
+                    # simple
+                    one_step = (pos >> 8) & ~occupancy[self.BOTH]
+                    # double
+                    two_steps = ((one_step & 0x0000FF0000000000) >> 8) & ~occupancy[self.BOTH]
                 # captures
-                captures_left = (pos >> 7) & occupancy[self.BLACK] & ~0x8080808080808080 # avoid a file
-                captures_right = (pos >> 9) & occupancy[self.BLACK] & ~0x0101010101010101 # avoid h file
+                captures_left = (pos >> 7) & occupancy[self.BLACK] & ~0x8080808080808080 if not attack_only else (pos >> 7) & ~0x8080808080808080
+                captures_right = (pos >> 9) & occupancy[self.BLACK] & ~0x0101010101010101 if not attack_only else (pos >> 9) & ~0x0101010101010101
             else:
-                # simple
-                one_step = (pos << 8) & ~occupancy[self.BOTH]
-                # double
-                two_steps = ((one_step & 0x0000000000FF0000) << 8) & ~occupancy[self.BOTH]
+                if not attack_only:
+                    # simple
+                    one_step = (pos << 8) & ~occupancy[self.BOTH]
+                    # double
+                    two_steps = ((one_step & 0x0000000000FF0000) << 8) & ~occupancy[self.BOTH]
                 # captures
-                captures_left = (pos << 9) & occupancy[self.WHITE] & ~0x0101010101010101 # avoid a file
-                captures_right = (pos << 7) & occupancy[self.WHITE] & ~0x8080808080808080 # avoid h file
+                captures_left = (pos << 9) & occupancy[self.WHITE] & ~0x0101010101010101 if not attack_only else (pos << 9) & ~0x0101010101010101 
+                captures_right = (pos << 7) & occupancy[self.WHITE] & ~0x8080808080808080 if not attack_only else (pos << 7) & ~0x8080808080808080
             moves |= one_step | two_steps | captures_left | captures_right
             return moves
         if piece == self.QUEEN:
@@ -234,21 +266,21 @@ class ChessGame():
             relevant_bits_rook = 64 - self.mb_rook[index]["shift"]
             attack_index_rook &= (1 << relevant_bits_rook) - 1
             moves = self.mb_bishop[index]["table"][attack_index_bishop] | self.mb_rook[index]["table"][attack_index_rook]
-            return moves & ~occupancy[self.player_turn]
+            return moves & ~occupancy[player]
         if piece == self.ROOK:
             masked = occupancy[self.BOTH] & self.mb_rook[index]["mask"]
             attack_index = (masked * self.mb_rook[index]["magic"]) >> self.mb_rook[index]["shift"]
             relevant_bits = 64 - self.mb_rook[index]["shift"]
             attack_index &= (1 << relevant_bits) - 1
             moves = self.mb_rook[index]["table"][attack_index]
-            return moves & ~occupancy[self.player_turn]
+            return moves & ~occupancy[player]
         if piece == self.BISHOP:
             masked = occupancy[self.BOTH] & self.mb_bishop[index]["mask"]
             attack_index = (masked * self.mb_bishop[index]["magic"]) >> self.mb_bishop[index]["shift"]
             relevant_bits = 64 - self.mb_bishop[index]["shift"]
             attack_index &= (1 << relevant_bits) - 1
             moves = self.mb_bishop[index]["table"][attack_index]
-            return moves & ~occupancy[self.player_turn]
+            return moves & ~occupancy[player]
         if piece == self.KNIGHT:
             rank, file = divmod(index, 8)
             for delta in self.KNIGHT_DELTAS:
@@ -257,7 +289,7 @@ class ChessGame():
                     tr, tf = divmod(target, 8)
                     if abs(tr - rank) <= 2 and abs(tf - file) <= 2: # on a square around the knight
                         moves |= 1 << target
-            return moves & ~occupancy[self.player_turn]
+            return moves & ~occupancy[player]
         # only king is left
         rank, file = divmod(index, 8)
         for delta in self.KING_DELTAS:
@@ -266,7 +298,7 @@ class ChessGame():
                 tr, tf = divmod(target, 8)
                 if abs(tr - rank) <= 1 and abs(tf - file) <= 1: # on a square around the king
                     moves |= 1 << target
-        return moves & ~occupancy[self.player_turn] 
+        return moves & ~occupancy[player] 
     def get_moves_piece(self, piece : int, index : int, sim_occupancy = None):
         ret = []
         moves_bitboard = self.get_moves_piece_bitboard(piece, index, sim_occupancy)
