@@ -270,16 +270,17 @@ class ChessGame():
         move_split = move.split("-")
         piece_from = move_split[0]
         piece_to = move_split[1]
-        from_row = 8 - int(piece_from[2])
-        from_col = self.letter_to_column(piece_from[1])
-        to_row = 8 - int(piece_to[2])
-        to_col = self.letter_to_column(piece_to[1])
-        # outside of the board
-        if from_col == -1 or to_col == -1:
-            return 0
-        if not (0 <= from_row < 8) or not (0 <= to_row < 8):
-            return 0
-        raise ValueError("Not build yet")
+        piece_type = self.str_to_piece(move[0])
+        index_from = self.square_to_index(piece_from[1:])
+        index_to = self.square_to_index(piece_to[1:])
+        self.set_piece(self.player_turn, piece_type, index_to)
+        self.pop_piece(self.player_turn, piece_type, index_from)
+        self.update_occupancy()
+        self.update_flags(move)
+        self.player_turn = (self.player_turn + 1) % 2
+        self.current_moves = self.get_moves()
+        return
+        
     
     #-------------------------------------------------------------------------------------------------------------
     # Moves

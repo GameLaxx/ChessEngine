@@ -94,9 +94,6 @@ class ChessRender():
                         if piece == "--":
                             continue
                         self.selected_piece = f"{piece[1]}{chr(cc + 97)}{8 - rc}"
-                        print("Selecting", self.selected_piece)
-                        print(self.board.str_to_piece(self.selected_piece[0]), self.board.square_to_index(self.selected_piece[1:3]))
-                        print("Can move : ", self.board.get_moves_piece(self.board.str_to_piece(self.selected_piece[0]), self.board.square_to_index(self.selected_piece[1:3])))
                         continue
                     # change piece
                     if (piece[0] == "w" and self.board.player_turn == 0) or (piece[0] == "b" and self.board.player_turn == 1):
