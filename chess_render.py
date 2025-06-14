@@ -61,7 +61,6 @@ class ChessRender():
         pygame.display.update()
         self.changed = False
 
-
     def get_square_clicked(self, pos):
         x, y = pos
         row = 7 - y // self.square_size if self.bottom_player else y // self.square_size
@@ -71,7 +70,7 @@ class ChessRender():
 
     def update(self):
         clock = pygame.time.Clock()
-        while True:
+        while self.board.winner == -1:
             clock.tick(60)
             if self.changed:
                 self.draw_board(self.win)
@@ -110,7 +109,21 @@ class ChessRender():
                     if self.board.move(self.board.current_moves[move_wanted]) == -1:
                         break
                     self.selected_piece = None
-
+        if self.changed:
+            self.draw_board(self.win)
+        if self.board.winner == 0:
+            print("White won !")
+        elif self.board.winner == 1:
+            print("Black won !")
+        elif self.board.winner == 2:
+            print("Draw !")
+        else:
+            print("Problem occured..")
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
 
 
                     

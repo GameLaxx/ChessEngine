@@ -54,6 +54,7 @@ class ChessGame():
             "wP2m" : None,
             "bP2m" : None
         }
+        self.winner = -1
         self.player_turn = self.WHITE
         self.current_moves = self.get_moves()
 
@@ -141,6 +142,7 @@ class ChessGame():
     #-------------------------------------------------------------------------------------------------------------
 
     def init_board(self):
+        self.winner = -1
         # pawns
         for i in range(8):
             self.set_piece(self.WHITE, self.PAWN, 48 + i)
@@ -348,6 +350,8 @@ class ChessGame():
             self.update_flags(move)
             self.player_turn = next_player
             self.current_moves = self.get_moves()
+            if len(self.current_moves) == 0 :
+                self.winner = (self.player_turn + 1) % 2 if self.is_king_checked() else self.BOTH
         return bitboards if bitboards else self.bitboards # redundant
         
     #-------------------------------------------------------------------------------------------------------------
