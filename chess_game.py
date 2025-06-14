@@ -358,7 +358,8 @@ class ChessGame():
     # Moves
     #-------------------------------------------------------------------------------------------------------------
 
-    def to_matrix(self):
+    def to_matrix(self, sim_bitboards = None):
+        bitboards = sim_bitboards if sim_bitboards else self.bitboards
         ret = [
             ["--"] * 8,
             ["--"] * 8,
@@ -370,15 +371,15 @@ class ChessGame():
             ["--"] * 8,
         ]
         for piece in range(6):
-            indices_w = self.bitboard_to_squares(self.bitboards[self.WHITE][piece]) 
+            indices_w = self.bitboard_to_squares(bitboards[self.WHITE][piece]) 
             for index in indices_w:
                 ret[index[0]][index[1]] = "w" + self.piece_to_str(piece)
-            indices_b = self.bitboard_to_squares(self.bitboards[self.BLACK][piece]) 
+            indices_b = self.bitboard_to_squares(bitboards[self.BLACK][piece]) 
             for index in indices_b:
                 ret[index[0]][index[1]] = "b" + self.piece_to_str(piece)
         return ret
 
-    def __repr__(self):
-        rows = list(map(lambda row : ".".join(row), self.to_matrix()))
+    def __repr__(self, sim_bitboards = None):
+        rows = list(map(lambda row : ".".join(row), self.to_matrix(sim_bitboards)))
         board = "\n".join(rows)
         return board
