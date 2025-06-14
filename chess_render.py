@@ -30,6 +30,7 @@ class ChessRender():
         pygame.display.set_caption("Jeu d'échecs")
 
     def draw_board(self, win):
+        current_board = self.board.to_matrix()
         # draw squares
         for _row in range(self.board.size):
             row = 7 - _row if self.bottom_player else _row
@@ -45,19 +46,20 @@ class ChessRender():
         for _row in range(self.board.size):
             row = 7 - _row if self.bottom_player else _row
             for col in range(self.board.size):
-                piece = self.board.board[_row][col]
+                piece = current_board[_row][col]
                 if piece == "--":
                     continue
                 win.blit(self.pieces[piece], (col * self.square_size, row * self.square_size))
         if self.selected_piece:
-            for move in self.board.get_moves_piece(self.selected_piece):
+            for move in self.board.get_moves_piece(self.board.str_to_piece(self.selected_piece[0]), self.board.square_to_index(self.selected_piece[1:3])):
+                if not self.board.is_legal(move):
+                    continue
                 move = move.split("-")[1]
                 row_s = 8 - int(move[2]) if self.bottom_player == 0 else int(move[2]) - 1
                 col_s = ord(move[1]) - 97
                 pygame.draw.circle(win, color, (col_s * self.square_size + self.square_size // 2, row_s * self.square_size + self.square_size // 2), self.square_size // 8)
         pygame.display.update()
         self.changed = False
-
 
     def get_square_clicked(self, pos):
         x, y = pos
@@ -68,7 +70,7 @@ class ChessRender():
 
     def update(self):
         clock = pygame.time.Clock()
-        while True:
+        while self.board.winner == -1:
             clock.tick(60)
             if self.changed:
                 self.draw_board(self.win)
@@ -79,9 +81,10 @@ class ChessRender():
                     sys.exit()
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
+                    current_board = self.board.to_matrix()
                     self.changed = True
                     rc, cc = self.get_square_clicked(pygame.mouse.get_pos())
-                    piece = self.board.board[rc][cc]
+                    piece = current_board[rc][cc]
                     if self.selected_piece == None:
                         # wrong color
                         if piece[0] == "w" and self.board.player_turn == 1:
@@ -92,12 +95,10 @@ class ChessRender():
                         if piece == "--":
                             continue
                         self.selected_piece = f"{piece[1]}{chr(cc + 97)}{8 - rc}"
-                        print("Selecting", self.selected_piece, self.board.get_moves_piece(self.selected_piece))
                         continue
                     # change piece
                     if (piece[0] == "w" and self.board.player_turn == 0) or (piece[0] == "b" and self.board.player_turn == 1):
                         self.selected_piece = f"{piece[1]}{chr(cc + 97)}{8 - rc}"
-                        print("Selecting", self.selected_piece, self.board.get_moves_piece(self.selected_piece))
                         continue
                     # try to play the move
                     move_played = f"{self.selected_piece}-{self.selected_piece[0]}{chr(cc + 97)}{8 - rc}"
@@ -108,7 +109,21 @@ class ChessRender():
                     if self.board.move(self.board.current_moves[move_wanted]) == -1:
                         break
                     self.selected_piece = None
-
+        if self.changed:
+            self.draw_board(self.win)
+        if self.board.winner == 0:
+            print("White won !")
+        elif self.board.winner == 1:
+            print("Black won !")
+        elif self.board.winner == 2:
+            print("Draw !")
+        else:
+            print("Problem occured..")
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
 
 
                     
