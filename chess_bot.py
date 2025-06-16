@@ -56,13 +56,29 @@ class ChessBot():
             return -self.params["bishop_pair"]
         return 0
 
-    def evaluate(self, bitboards, occupancy):
-        ret = 0
-        for name in dir(self):
-            if name.startswith("_ChessBot__rule_"):
-                func = getattr(self, name)
-                if callable(func):
-                    ret += func(bitboards, occupancy)
+    def evaluate(self, player_turn, bitboards, occupancy):
+        ret = None
+        for move in self.chess_engine.get_moves(bitboards, occupancy, (player_turn + 1) % 2):
+            sim_bitboards = [row[:] for row in bitboards]
+            sim_occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
+            self.chess_engine.update_occupancy(sim_bitboards, sim_occupancy)
+            self.chess_engine.move(move, sim_bitboards, sim_occupancy)
+            score = 0
+            for name in dir(self):
+                if name.startswith("_ChessBot__rule_"):
+                    func = getattr(self, name)
+                    if callable(func):
+                        score += func(sim_bitboards, sim_occupancy)
+            if ret == None:
+                ret = score
+                continue
+            if player_turn == self.BLACK:
+                if ret < score:
+                    ret = score
+                continue
+            if ret > score:
+                ret = score
+            continue
         return ret
 
     def make_decision(self, board : ChessGame):
@@ -70,16 +86,16 @@ class ChessBot():
         max_score = None
         to_play = None
         for move in moves:
-            sim_bitboards = [row[:] for row in self.chess_engine.bitboards]
+            sim_bitboards = [row[:] for row in board.bitboards]
             sim_occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
             self.chess_engine.update_occupancy(sim_bitboards, sim_occupancy)
             self.chess_engine.move(move, sim_bitboards, sim_occupancy)
-            score = self.evaluate(sim_bitboards, sim_occupancy)
+            score = self.evaluate(board.player_turn, sim_bitboards, sim_occupancy)
             if max_score == None:
                 max_score = score
                 to_play = move
                 continue
-            if self.chess_engine.player_turn == self.BLACK:
+            if board.player_turn == self.BLACK:
                 if max_score > score:
                     max_score = score
                     to_play = move

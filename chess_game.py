@@ -1,15 +1,6 @@
 import json
 
 # debug
-def print_bitboard(bb):
-    for rank in range(8):
-        line = ""
-        for file in range(8):
-            sq = rank * 8 + file
-            line += "1 " if (bb >> sq) & 1 else ". "
-        print(line)
-    print()
-
 def print_bit(bb):
     ret = ""
     for i in range(64):
@@ -61,6 +52,15 @@ class ChessGame():
     #-------------------------------------------------------------------------------------------------------------
     # Utilities
     #-------------------------------------------------------------------------------------------------------------
+
+    def print_bitboard(self, bitboard):
+        for rank in range(8):
+            line = ""
+            for file in range(8):
+                sq = rank * 8 + file
+                line += "1 " if (bitboard >> sq) & 1 else ". "
+            print(line)
+        print()
 
     def piece_to_str(self, piece):
         if piece == self.PAWN:
@@ -186,8 +186,8 @@ class ChessGame():
     #-------------------------------------------------------------------------------------------------------------
 
     def update_occupancy(self, sim_bitboards = None, sim_occupancy = None):
-        occupancy = sim_occupancy if sim_occupancy else self.occupancy
-        bitboards = sim_bitboards if sim_bitboards else self.bitboards
+        occupancy = sim_occupancy if sim_occupancy != None else self.occupancy
+        bitboards = sim_bitboards if sim_bitboards != None else self.bitboards
         occupancy[self.WHITE] = sum(bitboards[self.WHITE])
         occupancy[self.BLACK] = sum(bitboards[self.BLACK])
         occupancy[self.BOTH] = occupancy[self.WHITE] | occupancy[self.BLACK]
@@ -216,8 +216,8 @@ class ChessGame():
     #-------------------------------------------------------------------------------------------------------------
 
     def board_attacked(self, sim_bitboards = None, sim_occupancy = None, sim_color = None):
-        bitboards = sim_bitboards if sim_bitboards else self.bitboards
-        occupancy = sim_occupancy if sim_occupancy else self.occupancy
+        bitboards = sim_bitboards if sim_bitboards != None else self.bitboards
+        occupancy = sim_occupancy if sim_occupancy != None else self.occupancy
         player = sim_color if sim_color else self.player_turn
         opponent_bitboards = bitboards[(player + 1) % 2]
         ret_bitboards = 0
@@ -229,9 +229,9 @@ class ChessGame():
         return ret_bitboards
     
     def is_king_checked(self, sim_bitboards = None, sim_occupancy = None, sim_color = None):
-        bitboards = sim_bitboards if sim_bitboards else self.bitboards
-        occupancy = sim_occupancy if sim_occupancy else self.occupancy
-        player = sim_color if sim_color else self.player_turn
+        bitboards = sim_bitboards if sim_bitboards != None else self.bitboards
+        occupancy = sim_occupancy if sim_occupancy != None else self.occupancy
+        player = sim_color if sim_color != None else self.player_turn
         king_position = bitboards[player][self.KING].bit_length() - 1 # only one king
         bitboards_attacked = self.board_attacked(sim_bitboards=bitboards, sim_occupancy=occupancy, sim_color=player)
         return (1 << king_position) & bitboards_attacked != 0
@@ -240,8 +240,8 @@ class ChessGame():
         sim_bitboards = [row[:] for row in self.bitboards] # copy of the bitboards
         sim_bitboards = self.move(move, sim_bitboards)
         sim_occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
-        self.update_occupancy(sim_bitboards, sim_occupancy)
-        return not self.is_king_checked(sim_bitboards, sim_occupancy)
+        self.update_occupancy(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy)
+        return not self.is_king_checked(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy)
 
     #-------------------------------------------------------------------------------------------------------------
     # Moves
@@ -328,22 +328,23 @@ class ChessGame():
                 if abs(tr - rank) <= 1 and abs(tf - file) <= 1: # on a square around the king
                     moves |= 1 << target
         return moves & ~occupancy[player] 
-    def get_moves_piece(self, piece : int, index : int, sim_occupancy = None):
+    def get_moves_piece(self, piece : int, index : int, sim_occupancy = None, sim_color = None):
         ret = []
-        moves_bitboard = self.get_moves_piece_bitboard(piece, index, sim_occupancy=sim_occupancy)
+        moves_bitboard = self.get_moves_piece_bitboard(piece, index, sim_occupancy=sim_occupancy, sim_color=sim_color)
         from_square = divmod(index, 8)
         to_squares = self.bitboard_to_squares(moves_bitboard)
         for square in to_squares:
             piece_str = self.piece_to_str(piece)
             ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}")
         return ret
-    def get_moves(self, bitboards = None, sim_occupancy = None):
+    def get_moves(self, sim_bitboards = None, sim_occupancy = None, sim_color = None):
         ret = []
-        player_bitboards = bitboards[self.player_turn] if bitboards else self.bitboards[self.player_turn]
+        player = sim_color if sim_color != None else self.player_turn
+        bitboards = sim_bitboards[player] if sim_bitboards != None else self.bitboards[player]
         for piece in range(6):
-            indices = self.bitboard_to_indices(player_bitboards[piece])
+            indices = self.bitboard_to_indices(bitboards[piece])
             for index in indices:
-                ret += list(filter(self.is_legal , self.get_moves_piece(piece, index, sim_occupancy=sim_occupancy)))
+                ret += list(filter(self.is_legal , self.get_moves_piece(piece, index, sim_occupancy=sim_occupancy, sim_color=player)))
         return ret
 
     def move(self, move : str, sim_bitboards = None, sim_occupancy = None): # convention is "piece from-piece to"
@@ -357,7 +358,8 @@ class ChessGame():
         self.set_piece(self.player_turn, piece_type, index_to, sim_bitboards)
         self.pop_piece(self.player_turn, piece_type, index_from, sim_bitboards)
         self.pop_piece(next_player, -1, index_to, sim_bitboards) # -1 because we don't know the piece type and it is not relevant
-        self.update_occupancy(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy)
+        if (sim_bitboards != None and sim_occupancy != None) or (sim_bitboards == None and sim_occupancy == None):
+            self.update_occupancy(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy)
         if not sim_bitboards: # if bitboards is given then its a simulation for one move so no need to compute this
             self.update_flags(move)
             self.player_turn = next_player

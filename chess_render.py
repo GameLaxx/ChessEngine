@@ -76,6 +76,7 @@ class ChessRender():
             clock.tick(60)
             if self.changed:
                 self.draw_board(self.win)
+                self.board.print_bitboard(self.board.occupancy[self.board.BOTH])
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
