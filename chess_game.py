@@ -143,7 +143,6 @@ class ChessGame():
             bitboard &= bitboard - 1  # remove lowest bit
             count += 1
         return count
-    
     def count_piece_wholeboard(self, color, piece, sim_bitboards = None):
         bitboards = sim_bitboards if sim_bitboards else self.bitboards
         piece_bitboard = bitboards[color][piece]
@@ -216,6 +215,15 @@ class ChessGame():
     #-------------------------------------------------------------------------------------------------------------
 
     def board_attacked(self, sim_bitboards = None, sim_occupancy = None, sim_color = None):
+        """
+        ### Params:
+            - sim_bitboard: the bitboards to use
+            - sim_occupancy: the occupancy that goes with the bitboards
+            - sim_color: the color that is attacked
+        
+        ### Returns:
+            - the bitboard of the attacks
+        """
         bitboards = sim_bitboards if sim_bitboards != None else self.bitboards
         occupancy = sim_occupancy if sim_occupancy != None else self.occupancy
         player = sim_color if sim_color else self.player_turn
@@ -236,12 +244,13 @@ class ChessGame():
         bitboards_attacked = self.board_attacked(sim_bitboards=bitboards, sim_occupancy=occupancy, sim_color=player)
         return (1 << king_position) & bitboards_attacked != 0
     
-    def is_legal(self, move : str):
-        sim_bitboards = [row[:] for row in self.bitboards] # copy of the bitboards
-        sim_bitboards = self.move(move, sim_bitboards)
-        sim_occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
+    def is_legal(self, move : str, bitboards, occupancy : dict, sim_color = None):
+        sim_bitboards = [row[:] for row in bitboards]
+        sim_occupancy = occupancy.copy()
+        sim_bitboards = self.move(move, sim_bitboards,sim_occupancy)
+        player = sim_color if sim_color != None else self.player_turn
         self.update_occupancy(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy)
-        return not self.is_king_checked(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy)
+        return not self.is_king_checked(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy, sim_color=player)
 
     #-------------------------------------------------------------------------------------------------------------
     # Moves
@@ -340,27 +349,29 @@ class ChessGame():
     def get_moves(self, sim_bitboards = None, sim_occupancy = None, sim_color = None):
         ret = []
         player = sim_color if sim_color != None else self.player_turn
-        bitboards = sim_bitboards[player] if sim_bitboards != None else self.bitboards[player]
+        occupancy = sim_occupancy if sim_occupancy != None else self.occupancy
+        bitboards = sim_bitboards if sim_bitboards != None else self.bitboards
         for piece in range(6):
-            indices = self.bitboard_to_indices(bitboards[piece])
+            indices = self.bitboard_to_indices(bitboards[player][piece])
             for index in indices:
-                ret += list(filter(self.is_legal , self.get_moves_piece(piece, index, sim_occupancy=sim_occupancy, sim_color=player)))
+                ret += list(filter(lambda x : self.is_legal(x, bitboards, occupancy, player) , self.get_moves_piece(piece, index, sim_occupancy=occupancy, sim_color=player)))
         return ret
 
-    def move(self, move : str, sim_bitboards = None, sim_occupancy = None): # convention is "piece from-piece to"
-        next_player = (self.player_turn + 1) % 2
+    def move(self, move : str, sim_bitboards = None, sim_occupancy = None, sim_color = None): # convention is "piece from-piece to"
+        player = sim_color if sim_color != None else self.player_turn
+        next_player = (player + 1) % 2
         move_split = move.split("-")
         piece_from = move_split[0]
         piece_to = move_split[1]
         piece_type = self.str_to_piece(move[0])
         index_from = self.square_to_index(piece_from[1:])
         index_to = self.square_to_index(piece_to[1:])
-        self.set_piece(self.player_turn, piece_type, index_to, sim_bitboards)
-        self.pop_piece(self.player_turn, piece_type, index_from, sim_bitboards)
+        self.set_piece(player, piece_type, index_to, sim_bitboards)
+        self.pop_piece(player, piece_type, index_from, sim_bitboards)
         self.pop_piece(next_player, -1, index_to, sim_bitboards) # -1 because we don't know the piece type and it is not relevant
         if (sim_bitboards != None and sim_occupancy != None) or (sim_bitboards == None and sim_occupancy == None):
             self.update_occupancy(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy)
-        if not sim_bitboards: # if bitboards is given then its a simulation for one move so no need to compute this
+        if sim_bitboards == None and sim_color == None: # if bitboards is given then its a simulation for one move so no need to compute this
             self.update_flags(move)
             self.player_turn = next_player
             self.current_moves = self.get_moves()

@@ -4,6 +4,9 @@ from chess_bot import ChessBot
 
 board = ChessGame()
 bot = ChessBot(board)
-render = ChessRender(board, opponent2=bot)
 
+# bot.debug = True
+# print(bot.make_decision(board))
+
+render = ChessRender(board, opponent1=bot, opponent2=bot)
 render.update()

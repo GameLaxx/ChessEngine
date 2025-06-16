@@ -54,7 +54,7 @@ class ChessRender():
                 win.blit(self.pieces[piece], (col * self.square_size, row * self.square_size))
         if self.selected_piece:
             for move in self.board.get_moves_piece(self.board.str_to_piece(self.selected_piece[0]), self.board.square_to_index(self.selected_piece[1:3])):
-                if not self.board.is_legal(move):
+                if not self.board.is_legal(move, self.board.bitboards, self.board.occupancy):
                     continue
                 move = move.split("-")[1]
                 row_s = 8 - int(move[2]) if self.bottom_player == 0 else int(move[2]) - 1
@@ -76,7 +76,7 @@ class ChessRender():
             clock.tick(60)
             if self.changed:
                 self.draw_board(self.win)
-                self.board.print_bitboard(self.board.occupancy[self.board.BOTH])
+                # self.board.print_bitboard(self.board.occupancy[self.board.BOTH])
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
