@@ -1,5 +1,6 @@
 import pygame
 from chess_game import ChessGame
+from chess_bot import ChessBot
 import sys
 
 def getElementSatisfy(list : list[str], elem : str):
@@ -9,7 +10,7 @@ def getElementSatisfy(list : list[str], elem : str):
     return -1
 
 class ChessRender():
-    def __init__(self, board : ChessGame, bottom = 0, size = 640):
+    def __init__(self, board : ChessGame, opponent1 : ChessBot = None, opponent2 : ChessBot = None, bottom = 0, size = 640):
         pygame.init()
         self.board = board
         self.size = size
@@ -20,6 +21,7 @@ class ChessRender():
         self.pieces = {}
         self.selected_piece = None
         self.changed = True
+        self.players = [opponent1, opponent2]
         PIECE_NAMES = ["bR", "bN", "bB", "bQ", "bK", "bP", "wR", "wN", "wB", "wQ", "wK", "wP"]
         for name in PIECE_NAMES:
             self.pieces[name] = pygame.transform.scale(
@@ -79,8 +81,12 @@ class ChessRender():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-
-                elif event.type == pygame.MOUSEBUTTONDOWN:
+                elif event.type == pygame.KEYDOWN and self.players[self.board.player_turn] != None:
+                    if event.key == pygame.K_SPACE:
+                        to_play = self.players[self.board.player_turn].make_decision(self.board)
+                        self.board.move(to_play)
+                        self.changed = True
+                elif event.type == pygame.MOUSEBUTTONDOWN and self.players[self.board.player_turn] == None:
                     current_board = self.board.to_matrix()
                     self.changed = True
                     rc, cc = self.get_square_clicked(pygame.mouse.get_pos())

@@ -65,10 +65,8 @@ class ChessBot():
                     ret += func(bitboards, occupancy)
         return ret
 
-    def make_decision(self, bitboards):
-        occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
-        self.chess_engine.update_occupancy(bitboards, occupancy)
-        moves = self.chess_engine.get_moves(bitboards, occupancy)
+    def make_decision(self, board : ChessGame):
+        moves = board.get_moves()
         max_score = None
         to_play = None
         for move in moves:
@@ -77,7 +75,6 @@ class ChessBot():
             self.chess_engine.update_occupancy(sim_bitboards, sim_occupancy)
             self.chess_engine.move(move, sim_bitboards, sim_occupancy)
             score = self.evaluate(sim_bitboards, sim_occupancy)
-            print(move, score)
             if max_score == None:
                 max_score = score
                 to_play = move
