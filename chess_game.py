@@ -136,6 +136,18 @@ class ChessGame():
         if letter > "h" or letter < "a":
             return -1
         return ord(letter) - 97 # 97 == ord("a")
+    
+    def count_piece_bitboard(self, bitboard):
+        count = 0
+        while bitboard:
+            bitboard &= bitboard - 1  # remove lowest bit
+            count += 1
+        return count
+    
+    def count_piece_wholeboard(self, color, piece, sim_bitboards = None):
+        bitboards = sim_bitboards if sim_bitboards else self.bitboards
+        piece_bitboard = bitboards[color][piece]
+        return self.count_piece_bitboard(piece_bitboard)
 
     #-------------------------------------------------------------------------------------------------------------
     # Init
@@ -225,7 +237,7 @@ class ChessGame():
         return (1 << king_position) & bitboards_attacked != 0
     
     def is_legal(self, move : str):
-        sim_bitboards = [row[:] for row in self.bitboards]
+        sim_bitboards = [row[:] for row in self.bitboards] # copy of the bitboards
         sim_bitboards = self.move(move, sim_bitboards)
         sim_occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
         self.update_occupancy(sim_bitboards, sim_occupancy)
@@ -334,7 +346,7 @@ class ChessGame():
                 ret += list(filter(self.is_legal , self.get_moves_piece(piece, index, sim_occupancy=sim_occupancy)))
         return ret
 
-    def move(self, move : str, bitboards = None): # convention is "piece from-piece to"
+    def move(self, move : str, sim_bitboards = None, sim_occupancy = None): # convention is "piece from-piece to"
         next_player = (self.player_turn + 1) % 2
         move_split = move.split("-")
         piece_from = move_split[0]
@@ -342,17 +354,17 @@ class ChessGame():
         piece_type = self.str_to_piece(move[0])
         index_from = self.square_to_index(piece_from[1:])
         index_to = self.square_to_index(piece_to[1:])
-        self.set_piece(self.player_turn, piece_type, index_to, bitboards)
-        self.pop_piece(self.player_turn, piece_type, index_from, bitboards)
-        self.pop_piece(next_player, -1, index_to, bitboards) # -1 because we don't know the piece type and it is not relevant
-        if not bitboards: # if bitboards is given then its a simulation for one move so no need to compute this
-            self.update_occupancy()
+        self.set_piece(self.player_turn, piece_type, index_to, sim_bitboards)
+        self.pop_piece(self.player_turn, piece_type, index_from, sim_bitboards)
+        self.pop_piece(next_player, -1, index_to, sim_bitboards) # -1 because we don't know the piece type and it is not relevant
+        self.update_occupancy(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy)
+        if not sim_bitboards: # if bitboards is given then its a simulation for one move so no need to compute this
             self.update_flags(move)
             self.player_turn = next_player
             self.current_moves = self.get_moves()
             if len(self.current_moves) == 0 :
                 self.winner = (self.player_turn + 1) % 2 if self.is_king_checked() else self.BOTH
-        return bitboards if bitboards else self.bitboards # redundant
+        return sim_bitboards if sim_bitboards else self.bitboards # redundant
         
     #-------------------------------------------------------------------------------------------------------------
     # Moves

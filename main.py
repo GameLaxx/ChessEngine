@@ -4,14 +4,8 @@ from chess_bot import ChessBot
 
 board = ChessGame()
 bot = ChessBot(board)
-
-bitboards = [
-            [0 for _ in range(6)],
-            [0 for _ in range(6)]
-        ]
-board.set_piece(0, 4, 36, bitboards)
-occupancy = {0 : 0, 1 : 0, 2 : 0}
-board.update_occupancy(bitboards, occupancy)
-bot.evaluate(bitboards, occupancy)
-
-# bot.make_decision(bitboards)
+white_move = bot.make_decision(bot.chess_engine.bitboards)
+print(white_move)
+bot.chess_engine.move(white_move)
+black_move = bot.make_decision(bot.chess_engine.bitboards)
+print(black_move)
