@@ -22,6 +22,7 @@ class ChessGame():
     # bitboards : a1 == 0 and h8 == 63
     def __init__(self):
         self.size = 8
+        self.debug = False
         with open("MagicBitboards/mb_bishop.json", "r", encoding="utf-8") as f:
             self.mb_bishop = json.load(f)
             self.mb_bishop = {int(k): v for k, v in self.mb_bishop.items()}
@@ -231,9 +232,11 @@ class ChessGame():
         ret_bitboards = 0
         for piece in range(6):
             indices = self.bitboard_to_indices(opponent_bitboards[piece])
+            tmp_bb = 0
             for index in indices:
-                ret_bitboards |= self.get_moves_piece_bitboard(piece, index, sim_occupancy=occupancy, sim_color=(player + 1) % 2, attack_only=True)
-                # currently the index of the piece is not taken into account => if problem might be try this solution
+                tmp_bb |= self.get_moves_piece_bitboard(piece, index, sim_occupancy=occupancy, sim_color=(player + 1) % 2, attack_only=True)
+            ret_bitboards |= tmp_bb
+            # currently the index of the piece is not taken into account => if problem might be try this solution
         return ret_bitboards
     
     def is_king_checked(self, sim_bitboards = None, sim_occupancy = None, sim_color = None):
@@ -247,7 +250,7 @@ class ChessGame():
     def is_legal(self, move : str, bitboards, occupancy : dict, sim_color = None):
         sim_bitboards = [row[:] for row in bitboards]
         sim_occupancy = occupancy.copy()
-        sim_bitboards = self.move(move, sim_bitboards,sim_occupancy)
+        sim_bitboards = self.move(move, sim_bitboards, sim_occupancy, sim_color)
         player = sim_color if sim_color != None else self.player_turn
         self.update_occupancy(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy)
         return not self.is_king_checked(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy, sim_color=player)
@@ -267,6 +270,8 @@ class ChessGame():
             captures_left = 0
             captures_right = 0
             if player == self.WHITE:
+                if index // 8 == 0:
+                    return 0
                 if not attack_only:
                     # simple
                     one_step = (pos >> 8) & ~occupancy[self.BOTH]
@@ -279,6 +284,8 @@ class ChessGame():
                     captures_left &= occupancy[self.BLACK]
                     captures_right &= occupancy[self.BLACK]
             else:
+                if index >= 56:
+                    return 0
                 if not attack_only:
                     # simple
                     one_step = (pos << 8) & ~occupancy[self.BOTH]

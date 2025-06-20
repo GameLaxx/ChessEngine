@@ -72,8 +72,6 @@ class ChessBot():
             if name.startswith("_ChessBot__rule_"):
                 func = getattr(self, name)
                 if callable(func):
-                    # if self.debug:
-                    #     print("Func name", name, func(bitboards, occupancy))
                     ret += func(bitboards, occupancy)
         return ret
     
