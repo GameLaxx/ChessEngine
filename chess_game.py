@@ -93,6 +93,8 @@ class ChessGame():
             return self.QUEEN
         return self.KING
     
+    def index_to_square(self, index):
+        return divmod(index, 8)
     def square_to_index(self, square_str : str):
         row = 8 - int(square_str[1])
         col = ord(square_str[0]) - 97
@@ -124,7 +126,7 @@ class ChessGame():
             bitboard &= bitboard - 1 # remove lowest bit
         return indices
     def bitboard_to_squares(self, bitboard : int):
-        return list(map(lambda x : divmod(x, 8), self.bitboard_to_indices(bitboard)))
+        return list(map(self.index_to_square, self.bitboard_to_indices(bitboard)))
     
     def letter_to_column(self, letter : str):
         if len(letter) != 1:
@@ -296,20 +298,26 @@ class ChessGame():
     
     def detect_special_move(self, player_moving, piece, from_square, to_square):
         if piece == self.PAWN:
-            if player_moving == self.WHITE and to_square[0] == 0:
+            if player_moving == self.WHITE and to_square[0] == 0: # promotion
                 return "+"
-            if player_moving == self.BLACK and to_square[0] == 8:
+            if player_moving == self.BLACK and to_square[0] == 8: # promotion
                 return "+"
+            if from_square[1] == to_square[1]:
+                return ""
+            if to_square not in self.bitboard_to_squares(self.occupancy[(player_moving + 1) % 2]): # en passant
+                return "*"
         return ""
 
     def get_moves_piece_bitboard(self, piece : int, index : int, player_moving, attack_only = False):
         moves = 0
         if piece == self.PAWN:
+            piece_square = self.index_to_square(index)
             pos = 1 << index
             one_step = 0 
             two_steps = 0
             captures_left = 0
             captures_right = 0
+            en_passant = 0
             if player_moving == self.WHITE:
                 if index < 8 == 0:
                     return 0
@@ -324,6 +332,10 @@ class ChessGame():
                 if not attack_only:
                     captures_left &= self.occupancy[self.BLACK]
                     captures_right &= self.occupancy[self.BLACK]
+                if self.flags["bP2m"] != None and piece_square[1] - self.flags["bP2m"] == 1 and piece_square[0] == 3:
+                    en_passant = pos >> 9
+                if self.flags["bP2m"] != None and piece_square[1] - self.flags["bP2m"] == -1 and piece_square[0] == 3:
+                    en_passant = pos >> 7
             else:
                 if index >= 56:
                     return 0
@@ -338,7 +350,11 @@ class ChessGame():
                 if not attack_only:
                     captures_left &= self.occupancy[self.WHITE]
                     captures_right &= self.occupancy[self.WHITE]
-            moves |= one_step | two_steps | captures_left | captures_right
+                if self.flags["wP2m"] != None and piece_square[1] - self.flags["wP2m"] == 1 and piece_square[0] == 4:
+                    en_passant = pos << 7
+                if self.flags["wP2m"] != None and piece_square[1] - self.flags["wP2m"] == -1 and piece_square[0] == 4:
+                    en_passant = pos << 9
+            moves |= one_step | two_steps | captures_left | captures_right | en_passant
             return moves
         if piece == self.QUEEN:
             # bishop
@@ -400,6 +416,9 @@ class ChessGame():
                 for i in range(self.KNIGHT, self.KING):
                     ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}-{i}")
                 continue 
+            if is_special_move == "*":
+                ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}-*")
+                continue
         return ret
     def get_moves(self, player_moving):
         ret = []
@@ -425,7 +444,15 @@ class ChessGame():
             self.pop_piece(next_player, -1, index_to) # -1 because we don't know the piece type and it is not relevant
         else:
             special_move : str = move_split[2]
-            if special_move.isnumeric() and self.KNIGHT <= int(special_move) <= self.QUEEN: # pawn promotion
+            if special_move == "*": # en passant
+                piece_type = self.str_to_piece(move[0])
+                index_from = self.square_to_index(piece_from[1:])
+                index_to = self.square_to_index(piece_to[1:])
+                remove_from = index_to - (- 8 if self.player_turn == self.WHITE else 8)
+                self.set_piece(self.player_turn, piece_type, index_to)
+                self.pop_piece(self.player_turn, piece_type, index_from)
+                self.pop_piece(next_player, -1, remove_from) # -1 because we don't know the piece type and it is not relevant
+            elif special_move.isnumeric() and self.KNIGHT <= int(special_move) <= self.QUEEN: # pawn promotion
                 piece_type = self.str_to_piece(move[0])
                 new_piece_type = int(special_move)
                 index_from = self.square_to_index(piece_from[1:])
