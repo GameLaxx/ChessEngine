@@ -179,7 +179,7 @@ class ChessGame():
     def update_occupancy(self):
         self.occupancy[self.WHITE] = sum(self.bitboards[self.WHITE])
         self.occupancy[self.BLACK] = sum(self.bitboards[self.BLACK])
-        self.occupancy[self.BOTH] = self.bitboards[self.WHITE] | self.bitboards[self.BLACK]
+        self.occupancy[self.BOTH] = self.occupancy[self.WHITE] | self.occupancy[self.BLACK]
 
     def update_flags(self, move : str):
         if move[0] == "P":
@@ -206,7 +206,7 @@ class ChessGame():
 
     def _push(self):
         flags = (self.flags["wCastle"], self.flags["bCastle"], self.flags["wP2m"], self.flags["bP2m"])
-        self._stack.append(copy.deepcopy(self.bitboards), flags, self.player_turn)
+        self._stack.append((copy.deepcopy(self.bitboards), flags, self.player_turn))
 
     def _pop(self):
         self.bitboards, flags, self.player_turn = self._stack.pop()
@@ -233,7 +233,7 @@ class ChessGame():
             indices = self.bitboard_to_indices(opponent_bitboards[piece])
             tmp_bb = 0
             for index in indices:
-                tmp_bb |= self.get_moves_piece_bitboard(piece, index, sim_color=(player_attacked + 1) % 2, attack_only=True)
+                tmp_bb |= self.get_moves_piece_bitboard(piece, index, player_moving=(player_attacked + 1) % 2, attack_only=True)
             ret_bitboards |= tmp_bb
             # currently the index of the piece is not taken into account => if problem might be try this solution
         return ret_bitboards
@@ -244,13 +244,10 @@ class ChessGame():
         return (1 << king_position) & bitboards_attacked != 0
     
     def is_legal(self, move : str, player_moving):
-        # sim_bitboards = [row[:] for row in bitboards]
-        # sim_occupancy = occupancy.copy()
-        # sim_bitboards = self.move(move, sim_bitboards, sim_occupancy, sim_color)
-        # player = sim_color if sim_color != None else self.player_turn
-        # self.update_occupancy(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy)
-        # return not self.is_king_checked(sim_bitboards=sim_bitboards, sim_occupancy=sim_occupancy, sim_color=player)
-        return True
+        self._move(move)
+        is_legal = not self.is_king_checked(player_moving)
+        self._pop()
+        return is_legal
 
     #-------------------------------------------------------------------------------------------------------------
     # Moves
@@ -356,7 +353,9 @@ class ChessGame():
                 ret += list(filter(lambda x : self.is_legal(x, player_moving) , self.get_moves_piece(piece, index, player_moving)))
         return ret
 
-    def move(self, move : str, save = True): # convention is "piece from-piece to"
+    def _move(self, move : str, save = True): # convention is "piece from-piece to"
+        if save:
+            self._push()
         next_player = (self.player_turn + 1) % 2
         move_split = move.split("-")
         piece_from = move_split[0]
@@ -368,14 +367,15 @@ class ChessGame():
         self.pop_piece(self.player_turn, piece_type, index_from)
         self.pop_piece(next_player, -1, index_to) # -1 because we don't know the piece type and it is not relevant
         self.update_occupancy()
-        if save:
-            self.update_flags(move)
-            self.player_turn = next_player
-            self._push()
-            self.current_moves = self.get_moves(next_player)
-            if len(self.current_moves) == 0 :
-                self.winner = (self.player_turn + 1) % 2 if self.is_king_checked() else self.BOTH
+        self.update_flags(move)
         return self.bitboards # redundant because already changed
+    
+    def play(self, move : str):
+        self._move(move, False)
+        self.current_moves = self.get_moves((self.player_turn + 1) % 2)
+        if len(self.current_moves) == 0 :
+            self.winner = self.player_turn if self.is_king_checked() else self.BOTH
+        self.player_turn = (self.player_turn + 1) % 2
         
     #-------------------------------------------------------------------------------------------------------------
     # Moves

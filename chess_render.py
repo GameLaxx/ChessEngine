@@ -53,8 +53,8 @@ class ChessRender():
                     continue
                 win.blit(self.pieces[piece], (col * self.square_size, row * self.square_size))
         if self.selected_piece:
-            for move in self.board.get_moves_piece(self.board.str_to_piece(self.selected_piece[0]), self.board.square_to_index(self.selected_piece[1:3])):
-                if not self.board.is_legal(move, self.board.bitboards, self.board.occupancy):
+            for move in self.board.get_moves_piece(self.board.str_to_piece(self.selected_piece[0]), self.board.square_to_index(self.selected_piece[1:3]), self.board.player_turn):
+                if not self.board.is_legal(move, self.board.player_turn):
                     continue
                 move = move.split("-")[1]
                 row_s = 8 - int(move[2]) if self.bottom_player == 0 else int(move[2]) - 1
@@ -85,7 +85,7 @@ class ChessRender():
                 elif event.type == pygame.KEYDOWN and self.players[self.board.player_turn] != None:
                     if event.key == pygame.K_SPACE:
                         to_play = self.players[self.board.player_turn].make_decision(self.board)
-                        self.board.move(to_play)
+                        self.board.play(to_play)
                         self.changed = True
                 elif event.type == pygame.MOUSEBUTTONDOWN and self.players[self.board.player_turn] == None:
                     current_board = self.board.to_matrix()
@@ -113,8 +113,7 @@ class ChessRender():
                     if move_wanted == -1:
                         self.selected_piece = None
                         continue
-                    if self.board.move(self.board.current_moves[move_wanted]) == -1:
-                        break
+                    self.board.play(self.board.current_moves[move_wanted])
                     self.selected_piece = None
         if self.changed:
             self.draw_board(self.win)
