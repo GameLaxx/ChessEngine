@@ -392,14 +392,15 @@ class ChessGame():
                 self.set_piece(self.player_turn, new_piece_type, index_to)
                 self.pop_piece(self.player_turn, piece_type, index_from)
                 self.pop_piece(next_player, -1, index_to) # -1 because we don't know the piece type and it is not relevant
-
+            else:
+                raise ValueError("❗Illegal special move !")
         self.update_occupancy()
         self.update_flags(move)
         return self.bitboards # redundant because already changed
     
     def play(self, move : str):
         if move not in self.current_moves:
-            raise ValueError("Illegal move !")
+            raise ValueError("❗Illegal move !")
         self._move(move, False)
         self.player_turn = (self.player_turn + 1) % 2
         self.current_moves = self.get_moves(self.player_turn)
