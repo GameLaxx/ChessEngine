@@ -16,6 +16,7 @@ class ChessBot():
             "pawn_space" : 0.1,
             "pawn_center" : 0.1,
             "square_attacked" : 0.1,
+            "king_safety" : 0.01,
             "check_mate" : 100
         }
         self.values = ["pawn_value", "knight_value", "bishop_value", "rook_value", "queen_value"]
@@ -54,6 +55,27 @@ class ChessBot():
         nb_attacks_white = self.chess_engine.count_piece_bitboard(white_attacks)
         nb_attacks_black = self.chess_engine.count_piece_bitboard(black_attacks)
         return self.params["square_attacked"] * (nb_attacks_white - nb_attacks_black)
+    
+    def __rule_kingsafety(self, bitboards, occupancy):
+        white_attacks = self.chess_engine.board_attacked(bitboards, occupancy, self.BLACK)
+        black_attacks = self.chess_engine.board_attacked(bitboards, occupancy, self.WHITE)
+        count = 0
+        for color in [self.WHITE,self.BLACK]:
+            king_index = bitboards[color][self.chess_engine.KING].bit_length() - 1
+            king_rank, king_file = divmod(king_index, 8)
+            deltas = self.chess_engine.KING_DELTAS
+            for delta in deltas:
+                neighbor_index = king_index + delta
+                if not (0 <= neighbor_index < 64):
+                    continue
+                neighbor_rank, neighbor_file = divmod(neighbor_index, 8)
+                if abs(king_rank - neighbor_rank) > 1 or abs(king_file - neighbor_file) > 1:
+                    continue 
+                if color == self.WHITE:
+                    count += -1 if black_attacks & 1 << neighbor_index else 0
+                else : 
+                    count += 1 if white_attacks & 1 << neighbor_index else 0
+        return self.params["king_safety"] * count
     
     def __rule_bishoppair(self, bitboards, occupancy):
         bishop_white = self.chess_engine.count_piece_wholeboard(self.WHITE, self.chess_engine.BISHOP, bitboards)
