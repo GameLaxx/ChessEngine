@@ -253,6 +253,14 @@ class ChessGame():
     # Moves
     #-------------------------------------------------------------------------------------------------------------
     
+    def detect_special_move(self, player_moving, piece, from_square, to_square):
+        if piece == self.PAWN:
+            if player_moving == self.WHITE and to_square[0] == 0:
+                return "+"
+            if player_moving == self.BLACK and to_square[0] == 8:
+                return "+"
+        return ""
+
     def get_moves_piece_bitboard(self, piece : int, index : int, player_moving, attack_only = False):
         moves = 0
         if piece == self.PAWN:
@@ -262,7 +270,7 @@ class ChessGame():
             captures_left = 0
             captures_right = 0
             if player_moving == self.WHITE:
-                if index // 8 == 0:
+                if index < 8 == 0:
                     return 0
                 if not attack_only:
                     # simple
@@ -343,7 +351,14 @@ class ChessGame():
         to_squares = self.bitboard_to_squares(moves_bitboard)
         for square in to_squares:
             piece_str = self.piece_to_str(piece)
-            ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}")
+            is_special_move = self.detect_special_move(player_moving, piece, from_square, square)
+            if is_special_move == "": # no special move
+                ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}")
+                continue 
+            if is_special_move == "+": # pawn promotion
+                for i in range(self.KNIGHT, self.KING):
+                    ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}-{i}")
+                continue 
         return ret
     def get_moves(self, player_moving):
         ret = []
@@ -360,17 +375,31 @@ class ChessGame():
         move_split = move.split("-")
         piece_from = move_split[0]
         piece_to = move_split[1]
-        piece_type = self.str_to_piece(move[0])
-        index_from = self.square_to_index(piece_from[1:])
-        index_to = self.square_to_index(piece_to[1:])
-        self.set_piece(self.player_turn, piece_type, index_to)
-        self.pop_piece(self.player_turn, piece_type, index_from)
-        self.pop_piece(next_player, -1, index_to) # -1 because we don't know the piece type and it is not relevant
+        if len(move_split) == 2:
+            piece_type = self.str_to_piece(move[0])
+            index_from = self.square_to_index(piece_from[1:])
+            index_to = self.square_to_index(piece_to[1:])
+            self.set_piece(self.player_turn, piece_type, index_to)
+            self.pop_piece(self.player_turn, piece_type, index_from)
+            self.pop_piece(next_player, -1, index_to) # -1 because we don't know the piece type and it is not relevant
+        else:
+            special_move : str = move_split[2]
+            if special_move.isnumeric() and self.KNIGHT <= int(special_move) <= self.QUEEN: # pawn promotion
+                piece_type = self.str_to_piece(move[0])
+                new_piece_type = int(special_move)
+                index_from = self.square_to_index(piece_from[1:])
+                index_to = self.square_to_index(piece_to[1:])
+                self.set_piece(self.player_turn, new_piece_type, index_to)
+                self.pop_piece(self.player_turn, piece_type, index_from)
+                self.pop_piece(next_player, -1, index_to) # -1 because we don't know the piece type and it is not relevant
+
         self.update_occupancy()
         self.update_flags(move)
         return self.bitboards # redundant because already changed
     
     def play(self, move : str):
+        if move not in self.current_moves:
+            raise ValueError("Illegal move !")
         self._move(move, False)
         self.player_turn = (self.player_turn + 1) % 2
         self.current_moves = self.get_moves(self.player_turn)
