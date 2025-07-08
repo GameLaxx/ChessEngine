@@ -189,14 +189,14 @@ class ChessGame():
                 self.flags["wP2m" if self.player_turn == self.WHITE else "bP2m"] = None
             return
         if move[0] == "K":
-            self.flags["wKm" if self.player_turn == self.WHITE else "bKm"] = True
+            self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 1 << 1
             return
         if move[0] == "R":
             if move[1] == "a" and ((self.player_turn == self.WHITE and move[2] == "1") or ((self.player_turn == self.BLACK and move[2] == "8"))):
-                self.flags["wRam" if self.player_turn == self.WHITE else "bRam"] = True
+                self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 1
                 return
             if move[1] == "h" and ((self.player_turn == self.WHITE and move[2] == "1") or ((self.player_turn == self.BLACK and move[2] == "8"))):
-                self.flags["wRhm" if self.player_turn == self.WHITE else "bRhm"] = True
+                self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 1 << 2
                 return
         self.flags["wP2m" if self.player_turn == self.WHITE else "bP2m"] = None
 
@@ -372,10 +372,10 @@ class ChessGame():
     
     def play(self, move : str):
         self._move(move, False)
-        self.current_moves = self.get_moves((self.player_turn + 1) % 2)
-        if len(self.current_moves) == 0 :
-            self.winner = self.player_turn if self.is_king_checked() else self.BOTH
         self.player_turn = (self.player_turn + 1) % 2
+        self.current_moves = self.get_moves(self.player_turn)
+        if len(self.current_moves) == 0 :
+            self.winner = (self.player_turn + 1) % 2 if self.is_king_checked() else self.BOTH
         
     #-------------------------------------------------------------------------------------------------------------
     # Moves
