@@ -1,5 +1,6 @@
 import pygame
 from chess_game import ChessGame
+from chess_bot import ChessBot
 import sys
 
 def getElementSatisfy(list : list[str], elem : str):
@@ -9,7 +10,7 @@ def getElementSatisfy(list : list[str], elem : str):
     return -1
 
 class ChessRender():
-    def __init__(self, board : ChessGame, bottom = 0, size = 640):
+    def __init__(self, board : ChessGame, opponent1 : ChessBot = None, opponent2 : ChessBot = None, bottom = 0, size = 640):
         pygame.init()
         self.board = board
         self.size = size
@@ -20,6 +21,7 @@ class ChessRender():
         self.pieces = {}
         self.selected_piece = None
         self.changed = True
+        self.players = [opponent1, opponent2]
         PIECE_NAMES = ["bR", "bN", "bB", "bQ", "bK", "bP", "wR", "wN", "wB", "wQ", "wK", "wP"]
         for name in PIECE_NAMES:
             self.pieces[name] = pygame.transform.scale(
@@ -52,7 +54,7 @@ class ChessRender():
                 win.blit(self.pieces[piece], (col * self.square_size, row * self.square_size))
         if self.selected_piece:
             for move in self.board.get_moves_piece(self.board.str_to_piece(self.selected_piece[0]), self.board.square_to_index(self.selected_piece[1:3])):
-                if not self.board.is_legal(move):
+                if not self.board.is_legal(move, self.board.bitboards, self.board.occupancy):
                     continue
                 move = move.split("-")[1]
                 row_s = 8 - int(move[2]) if self.bottom_player == 0 else int(move[2]) - 1
@@ -74,13 +76,18 @@ class ChessRender():
             clock.tick(60)
             if self.changed:
                 self.draw_board(self.win)
+                # self.board.print_bitboard(self.board.occupancy[self.board.BOTH])
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-
-                elif event.type == pygame.MOUSEBUTTONDOWN:
+                elif event.type == pygame.KEYDOWN and self.players[self.board.player_turn] != None:
+                    if event.key == pygame.K_SPACE:
+                        to_play = self.players[self.board.player_turn].make_decision(self.board)
+                        self.board.move(to_play)
+                        self.changed = True
+                elif event.type == pygame.MOUSEBUTTONDOWN and self.players[self.board.player_turn] == None:
                     current_board = self.board.to_matrix()
                     self.changed = True
                     rc, cc = self.get_square_clicked(pygame.mouse.get_pos())
