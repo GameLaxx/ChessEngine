@@ -21,7 +21,7 @@ class ChessGame():
     KNIGHT_DELTAS = [17, 15, 10, 6, -17, -15, -10, -6]
     KING_DELTAS = [1, -1, 8, -8, 9, -9, 7, -7]
     # bitboards : a1 == 0 and h8 == 63
-    def __init__(self):
+    def __init__(self, board_fen = ""):
         self.size = 8
         self.debug = False
         with open("MagicBitboards/mb_bishop.json", "r", encoding="utf-8") as f:
@@ -30,16 +30,6 @@ class ChessGame():
         with open("MagicBitboards/mb_rook.json", "r", encoding="utf-8") as f:
             self.mb_rook = json.load(f)
             self.mb_rook = {int(k): v for k, v in self.mb_rook.items()}
-        # ----- board
-        self.bitboards = [
-            [0 for _ in range(6)],
-            [0 for _ in range(6)]
-        ] # all pieces on square 
-        self._stack = [] # stack of all previous positions and can be used for future positions
-        self.init_board() # place pieces on the right squares
-        # ----- occupancy
-        self.occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
-        self.update_occupancy() # after placing pieces, update occupancy
         # ----- flags
         self.flags = {
             "wCastle" : 0, # "three" bits : 000, left is rook, middle is king and right is rook
@@ -49,6 +39,19 @@ class ChessGame():
         }
         self.winner = -1
         self.player_turn = self.WHITE
+        # ----- board
+        self.bitboards = [
+            [0 for _ in range(6)],
+            [0 for _ in range(6)]
+        ] # all pieces on square 
+        if board_fen != "":
+            self.load(board_fen)
+        else:
+            self.init_board() # place pieces on the right squares
+        # ----- occupancy
+        self.occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
+        self.update_occupancy() # after placing pieces, update occupancy
+        self._stack = [] # stack of all previous positions and can be used for future positions
         # ----- first legal moves
         self.current_moves = self.get_moves(self.player_turn)
 
@@ -171,6 +174,44 @@ class ChessGame():
         # kings
         self.set_piece(self.BLACK, self.KING, 4)
         self.set_piece(self.WHITE, self.KING, 60)
+
+    def load(self, board_fen : str):
+        fen_flags = board_fen.split(" ")
+        fen_split : list[str] = fen_flags[0].split("/")
+        index = 63
+        for i in range(len(fen_split) - 1, -1, -1): # my bad all is reverse for now
+            row = fen_split[i]
+            for j in range(len(row) - 1, -1, -1):
+                if row[j].isnumeric():
+                    index -= int(row[j])
+                    continue
+                if row[j].isupper():
+                    self.set_piece(self.WHITE, self.str_to_piece(row[j]), index)
+                else:
+                    self.set_piece(self.BLACK, self.str_to_piece(row[j].upper()), index)
+                index -= 1
+
+        if fen_flags[1] == "w":
+            self.player_turn = self.WHITE
+        else:
+            self.player_turn = self.BLACK
+
+        if fen_flags[2] == "-": # no castle
+            self.flags["wCastle"] = 7
+            self.flags["bCastle"] = 7
+        else:
+            if not "K" in fen_flags[2]:
+                self.flags["wCastle"] |= 1
+            if not "Q" in fen_flags[2]:
+                self.flags["wCastle"] |= 1 << 2
+            if not "K" in fen_flags[2] and not "Q" in fen_flags[2]:
+                self.flags["wCastle"] |= 1 << 1 
+            if not "k" in fen_flags[2]:
+                self.flags["bCastle"] |= 1
+            if not "q" in fen_flags[2]:
+                self.flags["bCastle"] |= 1 << 2
+            if not "k" in fen_flags[2] and not "q" in fen_flags[2]:
+                self.flags["bCastle"] |= 1 << 1 
 
     #-------------------------------------------------------------------------------------------------------------
     # Update functions
