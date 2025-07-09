@@ -3,6 +3,6 @@ from chess_render import ChessRender
 from chess_bot import ChessBot
 
 board = ChessGame()
-bot = ChessBot(board)
+bot = ChessBot()
 render = ChessRender(board, opponent1=bot, opponent2=bot)
 render.update()

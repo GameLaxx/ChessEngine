@@ -1,11 +1,11 @@
 from chess_game import ChessGame
+import random
 
 class ChessBot():
     WHITE = 0
     BLACK = 1
     BOTH = 2
-    def __init__(self, chess_engine : ChessGame, debug = False):
-        self.chess_engine = chess_engine
+    def __init__(self, debug = False):
         self.params = {
             "pawn_value" : 1,
             "bishop_value" : 3,
@@ -26,14 +26,14 @@ class ChessBot():
     def __rule_material(self, bitboards, occupancy):
         ret = 0
         for piece in range(5):
-            piece_white = self.chess_engine.count_piece_wholeboard(self.WHITE, piece, bitboards)
-            piece_black = self.chess_engine.count_piece_wholeboard(self.BLACK, piece, bitboards)
+            piece_white = self.current_board.count_piece_wholeboard(self.WHITE, piece)
+            piece_black = self.current_board.count_piece_wholeboard(self.BLACK, piece)
             ret += self.params[self.values[piece]] * (piece_white - piece_black)
         return ret
     
     def __rule_pawnspace(self, bitboards, occupancy):
-        white_pawn_squares = self.chess_engine.bitboard_to_squares(bitboards[self.WHITE][0])
-        black_pawn_squares = self.chess_engine.bitboard_to_squares(bitboards[self.BLACK][0])
+        white_pawn_squares = self.current_board.bitboard_to_squares(bitboards[self.WHITE][0])
+        black_pawn_squares = self.current_board.bitboard_to_squares(bitboards[self.BLACK][0])
         white_space = 0
         black_space = 0
         for row, _ in white_pawn_squares:
@@ -45,25 +45,25 @@ class ChessBot():
     def __rule_pawncenter(self, bitboards, occupancy):
         center_white_bb = bitboards[self.WHITE][0] & self.center_squares
         center_black_bb = bitboards[self.BLACK][0] & self.center_squares
-        nb_center_pawns_white = self.chess_engine.count_piece_bitboard(center_white_bb)
-        nb_center_pawns_black = self.chess_engine.count_piece_bitboard(center_black_bb)
+        nb_center_pawns_white = self.current_board.count_piece_bitboard(center_white_bb)
+        nb_center_pawns_black = self.current_board.count_piece_bitboard(center_black_bb)
         return self.params["pawn_center"] * (nb_center_pawns_white - nb_center_pawns_black)
     
     def __rule_squareattacked(self, bitboards, occupancy):
-        white_attacks = self.chess_engine.board_attacked(bitboards, occupancy, self.BLACK)
-        black_attacks = self.chess_engine.board_attacked(bitboards, occupancy, self.WHITE)
-        nb_attacks_white = self.chess_engine.count_piece_bitboard(white_attacks)
-        nb_attacks_black = self.chess_engine.count_piece_bitboard(black_attacks)
+        white_attacks = self.current_board.board_attacked(self.BLACK)
+        black_attacks = self.current_board.board_attacked(self.WHITE)
+        nb_attacks_white = self.current_board.count_piece_bitboard(white_attacks)
+        nb_attacks_black = self.current_board.count_piece_bitboard(black_attacks)
         return self.params["square_attacked"] * (nb_attacks_white - nb_attacks_black)
     
     def __rule_kingsafety(self, bitboards, occupancy):
-        white_attacks = self.chess_engine.board_attacked(bitboards, occupancy, self.BLACK)
-        black_attacks = self.chess_engine.board_attacked(bitboards, occupancy, self.WHITE)
+        white_attacks = self.current_board.board_attacked(self.BLACK)
+        black_attacks = self.current_board.board_attacked(self.WHITE)
         count = 0
         for color in [self.WHITE,self.BLACK]:
-            king_index = bitboards[color][self.chess_engine.KING].bit_length() - 1
+            king_index = bitboards[color][self.current_board.KING].bit_length() - 1
             king_rank, king_file = divmod(king_index, 8)
-            deltas = self.chess_engine.KING_DELTAS
+            deltas = self.current_board.KING_DELTAS
             for delta in deltas:
                 neighbor_index = king_index + delta
                 if not (0 <= neighbor_index < 64):
@@ -78,8 +78,8 @@ class ChessBot():
         return self.params["king_safety"] * count
     
     def __rule_bishoppair(self, bitboards, occupancy):
-        bishop_white = self.chess_engine.count_piece_wholeboard(self.WHITE, self.chess_engine.BISHOP, bitboards)
-        bishop_black = self.chess_engine.count_piece_wholeboard(self.BLACK, self.chess_engine.BISHOP, bitboards)
+        bishop_white = self.current_board.count_piece_wholeboard(self.WHITE, self.current_board.BISHOP)
+        bishop_black = self.current_board.count_piece_wholeboard(self.BLACK, self.current_board.BISHOP)
         if bishop_black == bishop_white:
             return 0
         if bishop_white == 2:
@@ -97,53 +97,61 @@ class ChessBot():
                     ret += func(bitboards, occupancy)
         return ret
     
-    def evaluate(self, player_turn, bitboards, occupancy):
+    def evaluate(self):
         ret = None
-        for move in self.chess_engine.get_moves(bitboards, occupancy, (player_turn + 1) % 2):
-            sim_bitboards = [row[:] for row in bitboards]
-            sim_occupancy = {self.WHITE : 0, self.BLACK : 0, self.BOTH : 0}
-            self.chess_engine.update_occupancy(sim_bitboards, sim_occupancy)
-            self.chess_engine.move(move, sim_bitboards, sim_occupancy, sim_color=(player_turn + 1) % 2)
-            score = self.assign_score(sim_bitboards, sim_occupancy)
+        for move in self.current_board.get_moves(self.current_board.player_turn):
+            self.current_board._move(move)
+            score = self.assign_score(self.current_board.bitboards, self.current_board.occupancy)
             if ret == None:
                 ret = score
+                self.current_board._pop()
                 continue
-            if player_turn == self.BLACK:
-                if ret < score:
+            if self.current_board.player_turn == self.BLACK:
+                if ret > score:
                     ret = score
+                self.current_board._pop()
                 continue
-            if ret > score:
+            if ret < score:
                 ret = score
+            self.current_board._pop()
             continue
+        if score == None: # no response found ie check mate or draw
+            winning = self.current_board.is_king_checked(self.current_board.player_turn)
+            if winning:
+                score = - self.params["check_mate"] * (self.current_board.player_turn * 2 + 1)
+            else:
+                score = 0
         return ret
 
     def make_decision(self, board : ChessGame):
-        moves = board.get_moves()
+        self.current_board = board
+        moves = self.current_board.get_moves(self.current_board.player_turn)
         max_score = None
-        to_play = None
+        to_play = []
         for move in moves:
-            sim_bitboards = [row[:] for row in board.bitboards]
-            sim_occupancy = board.occupancy.copy()
-            self.chess_engine.move(move, sim_bitboards, sim_occupancy)
-            score = self.evaluate(board.player_turn, sim_bitboards, sim_occupancy)
-            if score == None: # no response found ie check mate or pat
-                winning = board.is_king_checked(sim_bitboards, sim_occupancy)
-                if winning:
-                    score = self.params["check_mate"] * (1 - board.player_turn * 2)
-                else:
-                    score = 0
+            self.current_board._move(move)
+            player_attacked = (self.current_board.player_turn + 1) % 2
+            self.current_board.player_turn = player_attacked
+            score = self.evaluate()
             if max_score == None:
                 max_score = score
-                to_play = move
+                to_play.append(move)
+                self.current_board._pop()
                 continue
-            if board.player_turn == self.BLACK:
-                if max_score > score:
+            if score == max_score:
+                to_play.append(move)
+                self.current_board._pop()
+                continue
+            if player_attacked == self.BLACK:
+                if max_score < score:
                     max_score = score
-                    to_play = move
+                    to_play = [move]
+                self.current_board._pop()
                 continue
-            if max_score < score:
+            if max_score > score:
                 max_score = score
-                to_play = move
+                to_play = [move]
+            self.current_board._pop()
             continue
-        return to_play
+        return random.choice(to_play)
 
