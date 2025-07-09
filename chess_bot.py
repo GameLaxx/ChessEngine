@@ -28,6 +28,14 @@ class ChessParams():
             "king_safety" : king_safety,
             "check_mate" : check_mate
         }
+        self.score = 0
+    
+    def random(self):
+        for key in self.dict:
+            if key == "check_mate":
+                continue
+            self.dict[key] = random.random() * 100
+        return self
 
 class ChessBot():
     WHITE = 0

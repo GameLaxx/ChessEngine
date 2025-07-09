@@ -521,7 +521,7 @@ class ChessGame():
             self.winner = self.BOTH
             return
         if len(self.current_moves) == 0 :
-            self.winner = (self.player_turn + 1) % 2 if self.is_king_checked() else self.BOTH
+            self.winner = (self.player_turn + 1) % 2 if self.is_king_checked(self.player_turn) else self.BOTH
             return
         
     #-------------------------------------------------------------------------------------------------------------
