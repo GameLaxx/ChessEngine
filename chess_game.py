@@ -281,10 +281,10 @@ class ChessGame():
             # currently the index of the piece is not taken into account => if problem might be try this solution
         return ret_bitboards
     
-    def is_king_checked(self, player_attacked):
-        king_position = self.bitboards[player_attacked][self.KING].bit_length() - 1 # only one king
+    def is_king_checked(self, player_attacked, king_index = -1):
+        king_position = king_index if king_index != -1 else 1 << (self.bitboards[player_attacked][self.KING].bit_length() - 1) # only one king
         bitboards_attacked = self.board_attacked(player_attacked)
-        return (1 << king_position) & bitboards_attacked != 0
+        return king_position & bitboards_attacked != 0
     
     def is_legal(self, move : str, player_moving):
         self._move(move)
@@ -306,6 +306,11 @@ class ChessGame():
                 return ""
             if to_square not in self.bitboard_to_squares(self.occupancy[(player_moving + 1) % 2]): # en passant
                 return "*"
+        if piece == self.KING:
+            if from_square[1] - to_square[1] == 2:
+                return "O" # queen castle
+            if from_square[1] - to_square[1] == -2:
+                return "o" # queen castle
         return ""
 
     def get_moves_piece_bitboard(self, piece : int, index : int, player_moving, attack_only = False):
@@ -400,6 +405,19 @@ class ChessGame():
                 tr, tf = divmod(target, 8)
                 if abs(tr - rank) <= 1 and abs(tf - file) <= 1: # on a square around the king
                     moves |= 1 << target
+        castle_rights = self.flags["wCastle" if player_moving == self.WHITE else "bCastle"]
+        if castle_rights & 1 << 1 == 1:
+            return moves & ~self.occupancy[player_moving] 
+        if castle_rights & 1 == 0: # queen castle
+            queen_castle_mask = (1 << 57) | (1 << 58) | (1 << 59) if player_moving == self.WHITE else (1 << 1) | (1 << 2) | (1 << 3)
+            queen_castle_right = self.occupancy[self.BOTH] & queen_castle_mask
+            if queen_castle_right == 0:
+                moves |= 1 << (index - 2)
+        if castle_rights & 1 << 2 == 0: # king castle
+            king_castle_mask = (1 << 61) | (1 << 62) if player_moving == self.WHITE else (1 << 5) | (1 << 6)
+            king_castle_right = self.occupancy[self.BOTH] & king_castle_mask
+            if king_castle_right == 0:
+                moves |= 1 << (index + 2)
         return moves & ~self.occupancy[player_moving] 
     def get_moves_piece(self, piece : int, index : int, player_moving):
         ret = []
@@ -416,8 +434,8 @@ class ChessGame():
                 for i in range(self.KNIGHT, self.KING):
                     ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}-{i}")
                 continue 
-            if is_special_move == "*":
-                ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}-*")
+            if is_special_move in ["*", "o", "O"]:
+                ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}-{is_special_move}")
                 continue
         return ret
     def get_moves(self, player_moving):
@@ -452,6 +470,22 @@ class ChessGame():
                 self.set_piece(self.player_turn, piece_type, index_to)
                 self.pop_piece(self.player_turn, piece_type, index_from)
                 self.pop_piece(next_player, -1, remove_from) # -1 because we don't know the piece type and it is not relevant
+            elif special_move == "o": # king castle
+                piece_type = self.str_to_piece(move[0])
+                index_from = self.square_to_index(piece_from[1:])
+                index_to = self.square_to_index(piece_to[1:])
+                self.set_piece(self.player_turn, piece_type, index_to)
+                self.pop_piece(self.player_turn, piece_type, index_from)
+                self.set_piece(self.player_turn, self.ROOK, index_to - 1)
+                self.pop_piece(self.player_turn, self.ROOK, index_from + 3)
+            elif special_move == "O": # queen castle
+                piece_type = self.str_to_piece(move[0])
+                index_from = self.square_to_index(piece_from[1:])
+                index_to = self.square_to_index(piece_to[1:])
+                self.set_piece(self.player_turn, piece_type, index_to)
+                self.pop_piece(self.player_turn, piece_type, index_from)
+                self.set_piece(self.player_turn, self.ROOK, index_to + 1)
+                self.pop_piece(self.player_turn, self.ROOK, index_from - 4)
             elif special_move.isnumeric() and self.KNIGHT <= int(special_move) <= self.QUEEN: # pawn promotion
                 piece_type = self.str_to_piece(move[0])
                 new_piece_type = int(special_move)

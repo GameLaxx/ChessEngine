@@ -115,6 +115,12 @@ class ChessBot():
                 ret = score
             self.current_board._pop()
             continue
+        if score == None: # no response found ie check mate or draw
+            winning = self.current_board.is_king_checked(self.current_board.player_turn)
+            if winning:
+                score = - self.params["check_mate"] * (self.current_board.player_turn * 2 + 1)
+            else:
+                score = 0
         return ret
 
     def make_decision(self, board : ChessGame):
@@ -127,12 +133,6 @@ class ChessBot():
             player_attacked = (self.current_board.player_turn + 1) % 2
             self.current_board.player_turn = player_attacked
             score = self.evaluate()
-            if score == None: # no response found ie check mate or draw
-                winning = self.current_board.is_king_checked(self.current_board.player_turn)
-                if winning:
-                    score = - self.params["check_mate"] * (self.current_board.player_turn * 2 + 1)
-                else:
-                    score = 0
             if max_score == None:
                 max_score = score
                 to_play.append(move)
