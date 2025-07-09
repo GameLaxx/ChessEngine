@@ -35,7 +35,9 @@ class ChessGame():
             "wCastle" : 0, # "three" bits : 000, left is rook, middle is king and right is rook
             "bCastle" : 0,
             "wP2m" : None,
-            "bP2m" : None
+            "bP2m" : None,
+            "moveCount" : 0,
+            "50moveRule" : 0
         }
         self.winner = -1
         self.player_turn = self.WHITE
@@ -252,12 +254,12 @@ class ChessGame():
     #-------------------------------------------------------------------------------------------------------------
 
     def _push(self):
-        flags = (self.flags["wCastle"], self.flags["bCastle"], self.flags["wP2m"], self.flags["bP2m"])
+        flags = (self.flags["wCastle"], self.flags["bCastle"], self.flags["wP2m"], self.flags["bP2m"], self.flags["moveCount"],self.flags["50moveRule"])
         self._stack.append((copy.deepcopy(self.bitboards), flags, self.player_turn))
 
     def _pop(self):
         self.bitboards, flags, self.player_turn = self._stack.pop()
-        self.flags["wCastle"], self.flags["bCastle"], self.flags["wP2m"], self.flags["bP2m"] = flags
+        self.flags["wCastle"], self.flags["bCastle"], self.flags["wP2m"], self.flags["bP2m"], self.flags["moveCount"], self.flags["50moveRule"] = flags
         self.update_occupancy()
 
     #-------------------------------------------------------------------------------------------------------------
@@ -510,8 +512,17 @@ class ChessGame():
         self._move(move, False)
         self.player_turn = (self.player_turn + 1) % 2
         self.current_moves = self.get_moves(self.player_turn)
+        self.flags["moveCount"] += 1
+        if move[0] == "P":
+            self.flags["50moveRule"] = 0
+        else:
+            self.flags["50moveRule"] += 1
+        if self.flags["50moveRule"] >= 100 and self.player_turn == self.WHITE:
+            self.winner = self.BOTH
+            return
         if len(self.current_moves) == 0 :
             self.winner = (self.player_turn + 1) % 2 if self.is_king_checked() else self.BOTH
+            return
         
     #-------------------------------------------------------------------------------------------------------------
     # Moves
