@@ -225,6 +225,10 @@ class ChessGame():
         self.occupancy[self.BOTH] = self.occupancy[self.WHITE] | self.occupancy[self.BLACK]
 
     def update_flags(self, move : str):
+        if move[-2:] == "h8" or move[-2:] == "h1":
+            self.flags["bCastle" if self.player_turn == self.WHITE else "wCastle"] |= 1 << 2
+        if move[-2:] == "a8" or move[-2:] == "a1":
+            self.flags["bCastle" if self.player_turn == self.WHITE else "wCastle"] |= 1
         if move[0] == "P":
             if abs(int(move[6]) - int(move[2])) == 2:
                 self.flags["wP2m" if self.player_turn == self.WHITE else "bP2m"] = ord(move[1]) - 97
