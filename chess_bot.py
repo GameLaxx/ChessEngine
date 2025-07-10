@@ -1,24 +1,48 @@
 from chess_game import ChessGame
 import random
 
+class ChessParams():
+    def __init__(self,
+        pawn_value = 1,
+        bishop_value = 3,
+        knight_value = 3,
+        rook_value = 5,
+        queen_value = 10,
+        bishop_pair = 1,
+        pawn_space = 0.1,
+        pawn_center = 0.1,
+        square_attacked = 0.1,
+        king_safety = 0.01,
+        check_mate = 100
+        ):
+        self.dict = {
+            "pawn_value" : pawn_value,
+            "bishop_value" : bishop_value,
+            "knight_value" : knight_value,
+            "rook_value" : rook_value,
+            "queen_value" : queen_value,
+            "bishop_pair" : bishop_pair,
+            "pawn_space" : pawn_space,
+            "pawn_center" : pawn_center,
+            "square_attacked" : square_attacked,
+            "king_safety" : king_safety,
+            "check_mate" : check_mate
+        }
+        self.score = 0
+    
+    def random(self):
+        for key in self.dict:
+            if key == "check_mate":
+                continue
+            self.dict[key] = random.random() * 100
+        return self
+
 class ChessBot():
     WHITE = 0
     BLACK = 1
     BOTH = 2
-    def __init__(self, debug = False):
-        self.params = {
-            "pawn_value" : 1,
-            "bishop_value" : 3,
-            "knight_value" : 3,
-            "rook_value" : 5,
-            "queen_value" : 10,
-            "bishop_pair" : 1,
-            "pawn_space" : 0.1,
-            "pawn_center" : 0.1,
-            "square_attacked" : 0.1,
-            "king_safety" : 0.01,
-            "check_mate" : 100
-        }
+    def __init__(self, params = ChessParams(), debug = False):
+        self.params = params.dict
         self.values = ["pawn_value", "knight_value", "bishop_value", "rook_value", "queen_value"]
         self.center_squares = 1 << 27 | 1 << 28 | 1 << 35 | 1 << 36
         self.debug = debug
@@ -115,12 +139,12 @@ class ChessBot():
                 ret = score
             self.current_board._pop()
             continue
-        if score == None: # no response found ie check mate or draw
+        if ret == None: # no response found ie check mate or draw
             winning = self.current_board.is_king_checked(self.current_board.player_turn)
             if winning:
-                score = - self.params["check_mate"] * (self.current_board.player_turn * 2 + 1)
+                ret = - self.params["check_mate"] * (self.current_board.player_turn * 2 + 1)
             else:
-                score = 0
+                ret = 0
         return ret
 
     def make_decision(self, board : ChessGame):

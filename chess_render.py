@@ -76,15 +76,15 @@ class ChessRender():
             clock.tick(60)
             if self.changed:
                 self.draw_board(self.win)
+            if self.players[self.board.player_turn] != None:
+                to_play = self.players[self.board.player_turn].make_decision(self.board)
+                self.board.play(to_play)
+                self.changed = True
+                pygame.time.wait(10)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                elif event.type == pygame.KEYDOWN and self.players[self.board.player_turn] != None:
-                    if event.key == pygame.K_SPACE:
-                        to_play = self.players[self.board.player_turn].make_decision(self.board)
-                        self.board.play(to_play)
-                        self.changed = True
                 elif event.type == pygame.MOUSEBUTTONDOWN and self.players[self.board.player_turn] == None:
                     current_board = self.board.to_matrix()
                     self.changed = True
