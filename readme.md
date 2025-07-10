@@ -25,6 +25,7 @@ A lot of rules and more precise optimization for each parameter is needed for th
 
 # Bot training
 For the bot training, we wanted an implementation where it plays against itself like AlphaZero, in order to optimize the different parameters that help it make decisions. The current implementation is quite rudimentary and consists only of a random selection of the best set of parameters, in a style similar to a genetic algorithm but without crossover or mutation.
+What is trained is called a ChessParameters class which should contain a dictionnary of parameters for the bot to use and an attribute `score` to indicate its score during the evaluation.
 
 # Futur implementation
 Future improvements for this project include implementing the threefold repetition rule, which leads to a draw, and adding more comprehensive rules for the bot. We also plan to develop better training methods to optimize the bot’s performance. Enhancing support for international move notation is another priority, along with adding proper pawn promotion handling in the visual engine. There is a known bug related to the expression 1 << (index - 2) that needs fixing. Additionally, we want to enable undoing moves to allow players to go back after making a move. Finally, integrating the ability to play games on Chess.com is a longer-term goal.
