@@ -1,0 +1,4 @@
+pygame
+scikit-optimize
+deap
+AIScratch
