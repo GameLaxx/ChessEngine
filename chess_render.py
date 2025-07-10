@@ -59,7 +59,7 @@ class ChessRender():
                     continue
                 win.blit(self.pieces[piece], (col * self.square_size, row * self.square_size))
         if self.selected_piece:
-            for move in self.board.get_moves_piece(self.board.str_to_piece(self.selected_piece[0]), self.board.square_to_index(self.selected_piece[1:3]), self.board.player_turn):
+            for move in self.board.get_moves_piece(self.board.str_to_piece(self.selected_piece[0]), self.board.square_str_to_index(self.selected_piece[1:3]), self.board.player_turn):
                 if not self.board.is_legal(move, self.board.player_turn):
                     continue
                 move = move.split("-")[1]

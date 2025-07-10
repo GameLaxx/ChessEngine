@@ -20,7 +20,7 @@ class ChessGame():
     KING = 5
     KNIGHT_DELTAS = [17, 15, 10, 6, -17, -15, -10, -6]
     KING_DELTAS = [1, -1, 8, -8, 9, -9, 7, -7]
-    # bitboards : a1 == 0 and h8 == 63
+    # bitboards : a8 == 0 and h1 == 63 (sorry)
     def __init__(self, board_fen = ""):
         self.size = 8
         self.debug = False
@@ -61,7 +61,13 @@ class ChessGame():
     # Utilities
     #-------------------------------------------------------------------------------------------------------------
 
-    def print_bitboard(self, bitboard):
+    def print_bitboard(self, bitboard : int):
+        """
+        ### Print a bitboard as a 8x8 string
+
+        Args:
+            bitboard (int): The bitboard to print.
+        """
         for rank in range(8):
             line = ""
             for file in range(8):
@@ -70,7 +76,16 @@ class ChessGame():
             print(line)
         print()
 
-    def piece_to_str(self, piece):
+    def piece_to_str(self, piece : int) -> str:
+        """
+        ### Convert a piece id to a piece char.
+
+        Args:
+            piece (int): The piece id.
+
+        Returns:
+            (str) : The char representing this piece.
+        """
         if piece == self.PAWN:
             return "P"
         if piece == self.KNIGHT:
@@ -82,7 +97,16 @@ class ChessGame():
         if piece == self.QUEEN:
             return "Q"
         return "K"
-    def str_to_piece(self, piece):
+    def str_to_piece(self, piece : str) -> int:
+        """
+        ### Convert a piece char to a piece id.
+
+        Args:
+            piece (str): The piece char.
+
+        Returns:
+            (int) : The id representing this piece.
+        """
         if piece == "P":
             return self.PAWN
         if piece == "N":
@@ -95,31 +119,76 @@ class ChessGame():
             return self.QUEEN
         return self.KING
     
-    def index_to_square(self, index):
+    def index_to_square(self, index : int) -> tuple[int, int]:
+        """
+        ### Convert an index (0 [a8] - 63 [h1]) to a square (row, col)
+
+        Args:
+            index (int): The index on the board.
+
+        Returns:
+            (tuple[int,int]) : The square row and column corresponding to this index.
+        """
         return divmod(index, 8)
-    def square_to_index(self, square_str : str):
+    def square_str_to_index(self, square_str : str) -> int :
+        """
+        ### Convert a square string to an index.
+
+        Args:
+            square_str (str): The square string as a1 or h8.
+
+        Returns:
+            (int): The index such that a8 = 0 and h1 = 63 (sorry)
+        """
         row = 8 - int(square_str[1])
         col = ord(square_str[0]) - 97
         return (col + row * 8)
-    def square_to_bit(self, square_str : str):
-        return 1 << self.square_to_index(square_str)
+    def square_str_to_bit(self, square_str : str) -> int:
+        """
+        ### Convert a square string to a bitboard with a one at the square indicated.
 
-    def set_piece(self, color, piece, index : int):
+        Args:
+            square_str (str): The square string as a1 or h8.
+
+        Returns:
+            (int): The bitboard [1 << square to index]
+        """
+        return 1 << self.square_str_to_index(square_str)
+
+    def set_piece(self, color : int, piece : int, index : int):
+        """
+        ### Apply a one on the bitboard corresponding to this piece for this color.
+
+        Args:
+            color (int): The color of the player's bitboard to modify.
+            piece (int): The piece id to modify.
+            index (int): The index corresponding to the square.
+        """
         self.bitboards[color][piece] |= 1 << index
-    def pop_piece(self, color, piece, index : int):
+    def pop_piece(self, color : int, piece : int, index : int):
+        """
+        ### Remove one or all piece from a bitboard.
+
+        Args:
+            color (int): The color of the player's bitboard to modify.
+            piece (int): The piece id to modify. If -1 then remove all the pieces for this square.
+            index (int): The index corresponding to the square.
+        """
         if piece == -1:
             for i in range(6):
                 self.bitboards[color][i] &= ~(1 << index)
             return
         self.bitboards[color][piece] &= ~(1 << index)
 
-    def bitboard_to_indices(self, bitboard : int):
+    def bitboard_to_indices(self, bitboard : int) -> list[int]:
         """
-        ### Params:
-            - bitboard: the bitboard to convert
+        ### For a given bitboard (which represent a piece for a certain color), return all position for the piece category as indices.
+
+        Params:
+            bitboard (int): The bitboard to convert.
         
-        ### Returns:
-            - list[(row, col)]
+        Returns:
+            list[int]: All the indices for which a piece is standing.
         """
         indices = []
         while bitboard:
@@ -127,23 +196,59 @@ class ChessGame():
             indices.append(lowest_bit.bit_length() - 1)
             bitboard &= bitboard - 1 # remove lowest bit
         return indices
-    def bitboard_to_squares(self, bitboard : int):
+    def bitboard_to_squares(self, bitboard : int) -> list[tuple[int, int]]:
+        """
+        ### For a given bitboard (which represent a piece for a certain color), return all position for the piece category as squares.
+
+        Params:
+            bitboard (int): The bitboard to convert.
+        
+        Returns:
+            list[(row, col)]: All the squares for which a piece is standing.
+        """
         return list(map(self.index_to_square, self.bitboard_to_indices(bitboard)))
     
-    def letter_to_column(self, letter : str):
+    def letter_to_column(self, letter : str) -> int:
+        """
+        ### Convert a column letter to a column index (a = 0 and h = 7).
+
+        Params:
+            letter (str): The letter of the column.
+        
+        Returns:
+            (int): The column index.
+        """
         if len(letter) != 1:
             return -1
         if letter > "h" or letter < "a":
             return -1
         return ord(letter) - 97 # 97 == ord("a")
     
-    def count_piece_bitboard(self, bitboard):
+    def count_piece_bitboard(self, bitboard : int) -> int:
+        """
+        ### Given a bitboard, count the number of ones. It may be uses to count the number of squares attacked by a piece or the number of piece for one category.
+
+        Params:
+            bitboard (int): The bitboard to count.
+        
+        Returns:
+            (int): The number of ones.
+        """
         count = 0
         while bitboard:
             bitboard &= bitboard - 1  # remove lowest bit
             count += 1
         return count
-    def count_piece_wholeboard(self, color, piece):
+    def count_piece_wholeboard(self, color : int, piece : int) -> int:
+        """
+        ### Given a bitboard (which represent a piece for a certain color), count the number of pieces.
+
+        Params:
+            bitboard (int): The bitboard to count.
+        
+        Returns:
+            (int): The number of pieces.
+        """
         piece_bitboard = self.bitboards[color][piece]
         return self.count_piece_bitboard(piece_bitboard)
 
@@ -152,6 +257,9 @@ class ChessGame():
     #-------------------------------------------------------------------------------------------------------------
 
     def init_board(self):
+        """
+        ### Reset the winner and place all the pieces.
+        """
         self.winner = -1
         # pawns
         for i in range(8):
@@ -180,6 +288,9 @@ class ChessGame():
         self.set_piece(self.WHITE, self.KING, 60)
 
     def load(self, board_fen : str):
+        """
+        ### Load a position and its flags using a FEN string.
+        """
         fen_flags = board_fen.split(" ")
         fen_split : list[str] = fen_flags[0].split("/")
         index = 63
@@ -222,42 +333,55 @@ class ChessGame():
     #-------------------------------------------------------------------------------------------------------------
 
     def update_occupancy(self):
+        """
+        ### Sum up all the pieces positions into 3 categories. White pieces, black pieces and all pieces.
+        """
         self.occupancy[self.WHITE] = sum(self.bitboards[self.WHITE])
         self.occupancy[self.BLACK] = sum(self.bitboards[self.BLACK])
         self.occupancy[self.BOTH] = self.occupancy[self.WHITE] | self.occupancy[self.BLACK]
 
     def update_flags(self, move : str):
-        if move[-2:] == "h8" or move[-2:] == "h1":
+        """
+        ### Given a move, update the flags. (ie : king move => remove castle right)
+
+        Params:
+            move (str): The move to consider.
+        """
+        if move[-2:] == "h8" or move[-2:] == "h1": # remove king castle because rook taken (or rook not there anymore but irrelevant in this case)
             self.flags["bCastle" if self.player_turn == self.WHITE else "wCastle"] |= 1 << 2
-        if move[-2:] == "a8" or move[-2:] == "a1":
+        if move[-2:] == "a8" or move[-2:] == "a1": # remove queen castle because rook taken (or rook not there anymore but irrelevant in this case)
             self.flags["bCastle" if self.player_turn == self.WHITE else "wCastle"] |= 1
         if move[0] == "P":
-            if abs(int(move[6]) - int(move[2])) == 2:
-                self.flags["wP2m" if self.player_turn == self.WHITE else "bP2m"] = ord(move[1]) - 97
-            else:
-                self.flags["wP2m" if self.player_turn == self.WHITE else "bP2m"] = None
-            return
+            if abs(int(move[2]) - int(move[6])) == 2: # pawn moved two squares so set up en passant flag
+                self.flags["wP2m" if self.player_turn == self.WHITE else "bP2m"] = ord(move[1]) - 97 # TODO : use adequate function
+                return
         if move[0] == "K":
-            self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 1 << 1
+            self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 1 << 1 # king move so no more castle
             return
         if move[0] == "R":
             if move[1] == "a" and ((self.player_turn == self.WHITE and move[2] == "1") or ((self.player_turn == self.BLACK and move[2] == "8"))):
-                self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 1
+                self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 1 # rook move so no more castle this side
                 return
             if move[1] == "h" and ((self.player_turn == self.WHITE and move[2] == "1") or ((self.player_turn == self.BLACK and move[2] == "8"))):
-                self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 1 << 2
+                self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 1 << 2 # rook move so no more castle this side
                 return
-        self.flags["wP2m" if self.player_turn == self.WHITE else "bP2m"] = None
+        self.flags["wP2m" if self.player_turn == self.WHITE else "bP2m"] = None # remove en passant flag #TODO set with int rather than None
 
     #-------------------------------------------------------------------------------------------------------------
     # Stack behaviour
     #-------------------------------------------------------------------------------------------------------------
 
     def _push(self):
+        """
+        ### Push a position, a set of flags and the player turn on top of the stack.
+        """
         flags = (self.flags["wCastle"], self.flags["bCastle"], self.flags["wP2m"], self.flags["bP2m"], self.flags["moveCount"],self.flags["50moveRule"])
         self._stack.append((copy.deepcopy(self.bitboards), flags, self.player_turn))
 
     def _pop(self):
+        """
+        ### Restore the top element of the stack as the current situation.
+        """
         self.bitboards, flags, self.player_turn = self._stack.pop()
         self.flags["wCastle"], self.flags["bCastle"], self.flags["wP2m"], self.flags["bP2m"], self.flags["moveCount"], self.flags["50moveRule"] = flags
         self.update_occupancy()
@@ -266,15 +390,15 @@ class ChessGame():
     # Legal Moves
     #-------------------------------------------------------------------------------------------------------------
 
-    def board_attacked(self, player_attacked):
+    def board_attacked(self, player_attacked : int) -> int:
         """
-        ### Params:
-            - sim_bitboard: the bitboards to use
-            - sim_occupancy: the occupancy that goes with the bitboards
-            - sim_color: the color that is attacked
+        ### Build a bitboard for all the squares attacked by the opponent.
+
+        Params:
+            player_attacked (int): The player that is attacked.
         
-        ### Returns:
-            - the bitboard of the attacks
+        Returns:
+            (int): The bitboard of all the squares attacked represented as ones.
         """
         opponent_bitboards = self.bitboards[(player_attacked + 1) % 2]
         ret_bitboards = 0
@@ -287,12 +411,32 @@ class ChessGame():
             # currently the index of the piece is not taken into account => if problem might be try this solution
         return ret_bitboards
     
-    def is_king_checked(self, player_attacked, king_index = -1):
-        king_position = king_index if king_index != -1 else 1 << (self.bitboards[player_attacked][self.KING].bit_length() - 1) # only one king
-        bitboards_attacked = self.board_attacked(player_attacked)
-        return king_position & bitboards_attacked != 0
+    def is_king_checked(self, player_attacked : int, king_bitboard : int = -1) -> bool:
+        """
+        ### For a given color look if the position of the king is attacked. A set of position can be used instead of the king position.
+
+        Params:
+            player_attacked (int): The side to look for check.
+            king_bitboard (int): if given then used as the whole bitboard of position for king. Used in castle when looking if castle through checks.
+        
+        Returns:
+            (bool): 0 means no check else means at least one check.
+        """
+        king_position = king_bitboard if king_bitboard != -1 else 1 << (self.bitboards[player_attacked][self.KING].bit_length() - 1) # only one king
+        bitboards_attacks = self.board_attacked(player_attacked)
+        return king_position & bitboards_attacks != 0
     
-    def is_legal(self, move : str, player_moving):
+    def is_legal(self, move : str, player_moving : int) -> bool:
+        """
+        ### After appliying the move, scan if the king is checked.
+
+        Params:
+            move (str): The move to play.
+            player_moving (int): The player that plays the move.
+        
+        Returns:
+            (bool): True is legal (ie not checked) else False
+        """
         self._move(move)
         is_legal = not self.is_king_checked(player_moving)
         self._pop()
@@ -302,7 +446,19 @@ class ChessGame():
     # Moves
     #-------------------------------------------------------------------------------------------------------------
     
-    def detect_special_move(self, player_moving, piece, from_square, to_square):
+    def detect_special_move(self, player_moving : int, piece : int, from_square : tuple[int, int], to_square : tuple[int, int]) -> str:
+        """
+        ### Some move are considered special such as promotion, castle or en passant. They deserve a special annotation.
+
+        Params:
+            player_moving (int): The player that played the move.
+            piece (int): The piece that moved.
+            from_square (tuple[int, int]): The square from where the piece went.
+            to_square (tuple[int, int]): The square to which the piece goes.
+        
+        Returns:
+            (str): The annotation (might be an empty string).
+        """
         if piece == self.PAWN:
             if player_moving == self.WHITE and to_square[0] == 0: # promotion
                 return "+"
@@ -319,7 +475,19 @@ class ChessGame():
                 return "o" # queen castle
         return ""
 
-    def get_moves_piece_bitboard(self, piece : int, index : int, player_moving, attack_only = False):
+    def get_moves_piece_bitboard(self, piece : int, index : int, player_moving : int, attack_only : bool = False) -> int:
+        """
+        ### For a piece at a certain index for a certain player, return all the possible moves as a bitboard.
+
+        Params:
+            piece (int): The piece that moves.
+            index (int): The square on which the piece stands.
+            player_moving (int): The player who wants to move this piece.
+            attack_only (bool): True if we want only attacks (no castle, no pawn forward movement only diagonal).
+        
+        Returns:
+            (int): The bitboard representing all the squares available for movement.
+        """
         moves = 0
         if piece == self.PAWN:
             piece_square = self.index_to_square(index)
@@ -425,7 +593,18 @@ class ChessGame():
             if king_castle_right == 0 and not self.is_king_checked(player_moving, king_castle_mask):
                 moves |= 1 << (index + 2)
         return moves & ~self.occupancy[player_moving] 
-    def get_moves_piece(self, piece : int, index : int, player_moving):
+    def get_moves_piece(self, piece : int, index : int, player_moving : int) -> list[str]:
+        """
+        ### For a piece at a certain index for a certain player, return all the possible moves as strings.
+
+        Params:
+            piece (int): The piece that moves.
+            index (int): The square on which the piece stands.
+            player_moving (int): The player who wants to move this piece.
+        
+        Returns:
+            (list[str]): All the possible moves for the piece at this index.
+        """
         ret = []
         moves_bitboard = self.get_moves_piece_bitboard(piece, index, player_moving)
         from_square = divmod(index, 8)
@@ -440,11 +619,20 @@ class ChessGame():
                 for i in range(self.KNIGHT, self.KING):
                     ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}-{i}")
                 continue 
-            if is_special_move in ["*", "o", "O"]:
+            if is_special_move in ["*", "o", "O"]: # en passant, king castle, queen castle
                 ret.append(f"{piece_str}{chr(from_square[1] + 97)}{8 - from_square[0]}-{piece_str}{chr(square[1] + 97)}{8 - square[0]}-{is_special_move}")
                 continue
         return ret
-    def get_moves(self, player_moving):
+    def get_moves(self, player_moving : int) -> list[str]:
+        """
+        ### For a player, return all his possible moves.
+
+        Params:
+            player_moving (int): The player who wants to move.
+        
+        Returns:
+            (list[str]): All the possible moves for this player.
+        """
         ret = []
         for piece in range(6):
             indices = self.bitboard_to_indices(self.bitboards[player_moving][piece])
@@ -452,7 +640,17 @@ class ChessGame():
                 ret += list(filter(lambda x : self.is_legal(x, player_moving) , self.get_moves_piece(piece, index, player_moving)))
         return ret
 
-    def _move(self, move : str, save = True): # convention is "piece from-piece to"
+    def _move(self, move : str, save : bool = True) -> list[list[int]]:
+        """
+        ### Apply a move to the current board. Can pass an option to save the position on top of the stack before playing the move.
+
+        Params:
+            move (str): The move to play. !! No verification for the legality of this move.
+            save (bool): Save or not the position on top of the stack.
+        
+        Returns:
+            (list[list[int]]): The new bitboards after playing the move.
+        """
         if save:
             self._push()
         next_player = (self.player_turn + 1) % 2
@@ -461,8 +659,8 @@ class ChessGame():
         piece_to = move_split[1]
         if len(move_split) == 2:
             piece_type = self.str_to_piece(move[0])
-            index_from = self.square_to_index(piece_from[1:])
-            index_to = self.square_to_index(piece_to[1:])
+            index_from = self.square_str_to_index(piece_from[1:])
+            index_to = self.square_str_to_index(piece_to[1:])
             self.set_piece(self.player_turn, piece_type, index_to)
             self.pop_piece(self.player_turn, piece_type, index_from)
             self.pop_piece(next_player, -1, index_to) # -1 because we don't know the piece type and it is not relevant
@@ -470,24 +668,24 @@ class ChessGame():
             special_move : str = move_split[2]
             if special_move == "*": # en passant
                 piece_type = self.str_to_piece(move[0])
-                index_from = self.square_to_index(piece_from[1:])
-                index_to = self.square_to_index(piece_to[1:])
+                index_from = self.square_str_to_index(piece_from[1:])
+                index_to = self.square_str_to_index(piece_to[1:])
                 remove_from = index_to - (- 8 if self.player_turn == self.WHITE else 8)
                 self.set_piece(self.player_turn, piece_type, index_to)
                 self.pop_piece(self.player_turn, piece_type, index_from)
                 self.pop_piece(next_player, -1, remove_from) # -1 because we don't know the piece type and it is not relevant
             elif special_move == "o": # king castle
                 piece_type = self.str_to_piece(move[0])
-                index_from = self.square_to_index(piece_from[1:])
-                index_to = self.square_to_index(piece_to[1:])
+                index_from = self.square_str_to_index(piece_from[1:])
+                index_to = self.square_str_to_index(piece_to[1:])
                 self.set_piece(self.player_turn, piece_type, index_to)
                 self.pop_piece(self.player_turn, piece_type, index_from)
                 self.set_piece(self.player_turn, self.ROOK, index_to - 1)
                 self.pop_piece(self.player_turn, self.ROOK, index_from + 3)
             elif special_move == "O": # queen castle
                 piece_type = self.str_to_piece(move[0])
-                index_from = self.square_to_index(piece_from[1:])
-                index_to = self.square_to_index(piece_to[1:])
+                index_from = self.square_str_to_index(piece_from[1:])
+                index_to = self.square_str_to_index(piece_to[1:])
                 self.set_piece(self.player_turn, piece_type, index_to)
                 self.pop_piece(self.player_turn, piece_type, index_from)
                 self.set_piece(self.player_turn, self.ROOK, index_to + 1)
@@ -495,8 +693,8 @@ class ChessGame():
             elif special_move.isnumeric() and self.KNIGHT <= int(special_move) <= self.QUEEN: # pawn promotion
                 piece_type = self.str_to_piece(move[0])
                 new_piece_type = int(special_move)
-                index_from = self.square_to_index(piece_from[1:])
-                index_to = self.square_to_index(piece_to[1:])
+                index_from = self.square_str_to_index(piece_from[1:])
+                index_to = self.square_str_to_index(piece_to[1:])
                 self.set_piece(self.player_turn, new_piece_type, index_to)
                 self.pop_piece(self.player_turn, piece_type, index_from)
                 self.pop_piece(next_player, -1, index_to) # -1 because we don't know the piece type and it is not relevant
@@ -507,20 +705,26 @@ class ChessGame():
         return self.bitboards # redundant because already changed
     
     def play(self, move : str):
+        """
+        ### Play a move and switch players.
+
+        Params:
+            move (str): The move to play. The move is verified to be legal here.
+        """
         if move not in self.current_moves:
             raise ValueError("❗Illegal move !")
         self._move(move, False)
         self.player_turn = (self.player_turn + 1) % 2
         self.current_moves = self.get_moves(self.player_turn)
         self.flags["moveCount"] += 1
-        if move[0] == "P":
+        if move[0] == "P": # a pawn moved so we reset the 50 move rule.
             self.flags["50moveRule"] = 0
         else:
             self.flags["50moveRule"] += 1
         if self.flags["50moveRule"] >= 100 and self.player_turn == self.WHITE:
             self.winner = self.BOTH
             return
-        if len(self.current_moves) == 0 :
+        if len(self.current_moves) == 0 : # no more moves means checkmate or draw
             self.winner = (self.player_turn + 1) % 2 if self.is_king_checked(self.player_turn) else self.BOTH
             return
         
@@ -528,8 +732,7 @@ class ChessGame():
     # Moves
     #-------------------------------------------------------------------------------------------------------------
 
-    def to_matrix(self, sim_bitboards = None):
-        bitboards = sim_bitboards if sim_bitboards else self.bitboards
+    def to_matrix(self):
         ret = [
             ["--"] * 8,
             ["--"] * 8,
@@ -541,15 +744,15 @@ class ChessGame():
             ["--"] * 8,
         ]
         for piece in range(6):
-            indices_w = self.bitboard_to_squares(bitboards[self.WHITE][piece]) 
+            indices_w = self.bitboard_to_squares(self.bitboards[self.WHITE][piece]) 
             for index in indices_w:
                 ret[index[0]][index[1]] = "w" + self.piece_to_str(piece)
-            indices_b = self.bitboard_to_squares(bitboards[self.BLACK][piece]) 
+            indices_b = self.bitboard_to_squares(self.bitboards[self.BLACK][piece]) 
             for index in indices_b:
                 ret[index[0]][index[1]] = "b" + self.piece_to_str(piece)
         return ret
 
-    def __repr__(self, sim_bitboards = None):
-        rows = list(map(lambda row : ".".join(row), self.to_matrix(sim_bitboards)))
+    def __repr__(self):
+        rows = list(map(lambda row : ".".join(row), self.to_matrix()))
         board = "\n".join(rows)
         return board
