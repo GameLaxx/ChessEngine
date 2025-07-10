@@ -18,6 +18,7 @@ Currently, it is possible to load a game using the FEN notation.
 
 # Game renderer
 This part of the project is quite simple. It’s a basic implementation using Pygame that allows you to visualize the board and play. When you click on a piece, the list of its legal moves is displayed, and if you click on one of those squares, the move is played. It’s possible to plug in bots to play instead of one or both players. They just need to have a function called "make\_decision" that takes a board as input and returns a move according to the notation described above. However, the display of pawn promotions is still missing. Currently, a human player can only promote to a knight (which is not the case for a plugged-in bot).
+You can set the bottom player with the bottom attributes and you can modify the canvas size with the size attributes.
 
 # Chess bot
 Our choice for implementing the chess bot is based on the concept from the YouTuber "Green Lemon Games," who builds chess bots using rules predefined by his chat, and whose bots can only look one move ahead. The goal was to create a bot capable of evaluating all its possible moves by considering the best possible reply from its opponent for each move, and then selecting what it believes to be the best move to play.

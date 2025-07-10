@@ -13,7 +13,7 @@ class ChessRender():
     def __init__(self, board : ChessGame, opponent1 : ChessBot = None, opponent2 : ChessBot = None, bottom = 0, size = 640):
         pygame.init()
         self.board = board
-        self.size = size
+        self.size = size # size of the canvas
         self.square_size = self.size // self.board.size
         self.white_color = (240, 217, 181)
         self.brown_color = (181, 136, 99)
@@ -21,7 +21,7 @@ class ChessRender():
         self.pieces = {}
         self.selected_piece = None
         self.changed = True
-        self.players = [opponent1, opponent2]
+        self.players = [opponent1, opponent2] # store bot or human player
         PIECE_NAMES = ["bR", "bN", "bB", "bQ", "bK", "bP", "wR", "wN", "wB", "wQ", "wK", "wP"]
         for name in PIECE_NAMES:
             self.pieces[name] = pygame.transform.scale(
@@ -29,9 +29,15 @@ class ChessRender():
             )
         self.win = pygame.display.set_mode((self.size, self.size))
         self.bottom_player = bottom # 0 is for white, 1 is for black
-        pygame.display.set_caption("Jeu d'échecs")
+        pygame.display.set_caption("Chess board")
 
-    def draw_board(self, win):
+    def draw_board(self, win : pygame.surface.Surface):
+        """
+        ### Draw the board from the current position
+
+        Args:
+            win (pygame.surface.Surface): The surface / canvas to draw on.
+        """
         current_board = self.board.to_matrix()
         # draw squares
         for _row in range(self.board.size):
@@ -63,7 +69,16 @@ class ChessRender():
         pygame.display.update()
         self.changed = False
 
-    def get_square_clicked(self, pos):
+    def get_square_clicked(self, pos : tuple[float, float]) -> tuple[int, int]:
+        """
+        ### Transform a position on the canvas into a row and column index.
+
+        Args:
+            pos (tuple[float, float]): x and y coordinates of the click.
+
+        Returns:
+            (tuple[int, int]) : The square clicked.
+        """
         x, y = pos
         row = 7 - y // self.square_size if self.bottom_player else y // self.square_size
         col = x // self.square_size
@@ -71,12 +86,19 @@ class ChessRender():
 
 
     def update(self):
+        """
+        ### Update the canvas depending on events.
+
+        Click on pieces to show their legal moves.
+        Click on the highlighted squares to move the piece.
+        Stops when the game ends or an error occurs.
+        """
         clock = pygame.time.Clock()
         while self.board.winner == -1:
             clock.tick(60)
-            if self.changed:
+            if self.changed: # this avoid unneeded graphic update
                 self.draw_board(self.win)
-            if self.players[self.board.player_turn] != None:
+            if self.players[self.board.player_turn] != None: # bot moves instantly
                 to_play = self.players[self.board.player_turn].make_decision(self.board)
                 self.board.play(to_play)
                 self.changed = True
@@ -123,7 +145,7 @@ class ChessRender():
             print("Draw !")
         else:
             print("Problem occured..")
-        while True:
+        while True: # keep the canvas open but do nothing
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
