@@ -356,7 +356,7 @@ class ChessGame():
                 self.flags["wP2m" if self.player_turn == self.WHITE else "bP2m"] = ord(move[1]) - 97 # TODO : use adequate function
                 return
         if move[0] == "K":
-            self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 1 << 1 # king move so no more castle
+            self.flags["wCastle" if self.player_turn == self.WHITE else "bCastle"] |= 7 # king move so no more castle
             return
         if move[0] == "R":
             if move[1] == "a" and ((self.player_turn == self.WHITE and move[2] == "1") or ((self.player_turn == self.BLACK and move[2] == "8"))):

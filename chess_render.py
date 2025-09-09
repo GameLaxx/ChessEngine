@@ -108,6 +108,7 @@ class ChessRender():
             clock.tick(60)
             if self.changed: # this avoid unneeded graphic update
                 self.draw_board(self.win)
+                # print(self.board.flags)
             if self.players[self.board.player_turn] != None: # bot moves instantly
                 to_play = self.players[self.board.player_turn].make_decision(self.board)
                 self.board.play(to_play)
