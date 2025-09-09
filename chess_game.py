@@ -580,14 +580,14 @@ class ChessGame():
                 if abs(tr - rank) <= 1 and abs(tf - file) <= 1: # on a square around the king
                     moves |= 1 << target
         castle_rights = self.flags["wCastle" if player_moving == self.WHITE else "bCastle"]
-        if attack_only or castle_rights & 1 << 1 == 1 or self.is_king_checked(player_moving):
+        if attack_only or castle_rights & (1 << 1) == 1 or self.is_king_checked(player_moving):
             return moves & ~self.occupancy[player_moving] 
         if castle_rights & 1 == 0: # queen castle
             queen_castle_mask = (1 << 57) | (1 << 58) | (1 << 59) if player_moving == self.WHITE else (1 << 1) | (1 << 2) | (1 << 3)
             queen_castle_right = self.occupancy[self.BOTH] & queen_castle_mask
             if queen_castle_right == 0 and not self.is_king_checked(player_moving, queen_castle_mask):
                 moves |= 1 << (index - 2)
-        if castle_rights & 1 << 2 == 0: # king castle
+        if castle_rights & (1 << 2) == 0: # king castle
             king_castle_mask = (1 << 61) | (1 << 62) if player_moving == self.WHITE else (1 << 5) | (1 << 6)
             king_castle_right = self.occupancy[self.BOTH] & king_castle_mask
             if king_castle_right == 0 and not self.is_king_checked(player_moving, king_castle_mask):
