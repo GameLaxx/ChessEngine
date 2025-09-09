@@ -13,7 +13,8 @@ class ChessParams():
         pawn_center = 0.1,
         square_attacked = 0.1,
         king_safety = 0.01,
-        check_mate = 100
+        check_mate = 100,
+        max_score = 50
         ):
         self.dict = {
             "pawn_value" : pawn_value,
@@ -26,7 +27,8 @@ class ChessParams():
             "pawn_center" : pawn_center,
             "square_attacked" : square_attacked,
             "king_safety" : king_safety,
-            "check_mate" : check_mate
+            "check_mate" : check_mate,
+            "max_score" : max_score
         }
         self.score = 0
     
@@ -140,11 +142,13 @@ class ChessBot():
             return -self.params["bishop_pair"]
         return 0
     
-    def assign_score(self) -> float:
+    def assign_score(self, board_ext = None) -> float:
         """
         Returns:
             (float) : Go through every rule and add their result to assing a score to a position.
         """
+        if board_ext != None:
+            self.current_board = board_ext
         ret = 0
         for name in dir(self):
             if name.startswith("_ChessBot__rule_"):

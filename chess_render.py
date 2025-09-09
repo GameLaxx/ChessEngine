@@ -10,24 +10,27 @@ def getElementSatisfy(list : list[str], elem : str):
     return -1
 
 class ChessRender():
-    def __init__(self, board : ChessGame, opponent1 : ChessBot = None, opponent2 : ChessBot = None, bottom = 0, size = 640):
+    def __init__(self, board : ChessGame, opponent1 : ChessBot = None, opponent2 : ChessBot = None, bottom = 0, size = 640, chess_evaluation : ChessBot = None):
         pygame.init()
         self.board = board
         self.size = size # size of the canvas
         self.square_size = self.size // self.board.size
-        self.white_color = (240, 217, 181)
+        self.white_color = (255, 255, 255)
+        self.black_color = (0, 0, 0)
+        self.light_color = (240, 217, 181)
         self.brown_color = (181, 136, 99)
         self.green_color = (100, 180, 100)
         self.pieces = {}
         self.selected_piece = None
         self.changed = True
         self.players = [opponent1, opponent2] # store bot or human player
+        self.chess_evaluation = chess_evaluation # evaluation bar bot
         PIECE_NAMES = ["bR", "bN", "bB", "bQ", "bK", "bP", "wR", "wN", "wB", "wQ", "wK", "wP"]
         for name in PIECE_NAMES:
             self.pieces[name] = pygame.transform.scale(
                 pygame.image.load(f"pieces/{name}.png"), (self.square_size, self.square_size)
             )
-        self.win = pygame.display.set_mode((self.size, self.size))
+        self.win = pygame.display.set_mode((self.size + (20 if self.chess_evaluation != None else 0), self.size))
         self.bottom_player = bottom # 0 is for white, 1 is for black
         pygame.display.set_caption("Chess board")
 
@@ -43,7 +46,7 @@ class ChessRender():
         for _row in range(self.board.size):
             row = 7 - _row if self.bottom_player else _row
             for col in range(self.board.size):
-                color = self.white_color if (row + col) % 2 == 0 else self.brown_color
+                color = self.light_color if (row + col) % 2 == 0 else self.brown_color
                 pygame.draw.rect(win, color, (col * self.square_size, row * self.square_size, self.square_size, self.square_size))
         if self.selected_piece:
             row_s = 8 - int(self.selected_piece[2]) if self.bottom_player == 0 else int(self.selected_piece[2]) - 1
@@ -66,6 +69,13 @@ class ChessRender():
                 row_s = 8 - int(move[2]) if self.bottom_player == 0 else int(move[2]) - 1
                 col_s = ord(move[1]) - 97
                 pygame.draw.circle(win, color, (col_s * self.square_size + self.square_size // 2, row_s * self.square_size + self.square_size // 2), self.square_size // 8)
+        # draw evaluation bar
+        if self.chess_evaluation != None:
+            current_score = self.chess_evaluation.assign_score(self.board)
+            white_length = self.size / 2 + self.size / 2 * current_score / self.chess_evaluation.params["max_score"]
+            black_length = self.size / 2 - self.size / 2 * current_score / self.chess_evaluation.params["max_score"]
+            pygame.draw.rect(win, self.black_color, (self.size, 0, 20, black_length))
+            pygame.draw.rect(win, self.white_color, (self.size, self.size - white_length, 20, white_length))
         pygame.display.update()
         self.changed = False
 
