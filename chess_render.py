@@ -10,7 +10,7 @@ def getElementSatisfy(list : list[str], elem : str):
     return -1
 
 class ChessRender():
-    def __init__(self, board : ChessGame, opponent1 : ChessBot = None, opponent2 : ChessBot = None, bottom = 0, size = 640, chess_evaluation : ChessBot = None):
+    def __init__(self, board : ChessGame, opponent1 : ChessBot = None, opponent2 : ChessBot = None, bottom = 0, size = 640, chess_evaluation : ChessBot = None, bot_speed : float = 10):
         pygame.init()
         self.board = board
         self.size = size # size of the canvas
@@ -32,6 +32,7 @@ class ChessRender():
             )
         self.win = pygame.display.set_mode((self.size + (20 if self.chess_evaluation != None else 0), self.size))
         self.bottom_player = bottom # 0 is for white, 1 is for black
+        self.bot_speed = bot_speed # in sec
         pygame.display.set_caption("Chess board")
 
     def draw_board(self, win : pygame.surface.Surface):
@@ -113,7 +114,7 @@ class ChessRender():
                 to_play = self.players[self.board.player_turn].make_decision(self.board)
                 self.board.play(to_play)
                 self.changed = True
-                pygame.time.wait(10)
+                pygame.time.wait(int(self.bot_speed * 1000))
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
