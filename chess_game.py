@@ -462,7 +462,7 @@ class ChessGame():
         if piece == self.PAWN:
             if player_moving == self.WHITE and to_square[0] == 0: # promotion
                 return "+"
-            if player_moving == self.BLACK and to_square[0] == 8: # promotion
+            if player_moving == self.BLACK and to_square[0] == 7: # promotion
                 return "+"
             if from_square[1] == to_square[1]:
                 return ""
