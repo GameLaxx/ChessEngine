@@ -5,7 +5,7 @@ class ChessParams():
     def __init__(self,
         pawn_value = 1,
         bishop_value = 3,
-        knight_value = 3,
+        knight_value = 4,
         rook_value = 5,
         queen_value = 10,
         bishop_pair = 1,
